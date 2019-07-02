@@ -17,7 +17,8 @@ F_m = hcat([
 	[motorData[mtr]["MaxTorqueNewtonmeters"],
 	 motorData[mtr]["MaxFreeSpeedRadPerSec"],
 	 motorData[mtr]["price"],
-	 motorData[mtr]["massKg"]]
+	 motorData[mtr]["massKg"],
+	 motorData[mtr]["MaxFreeSpeedRadPerSec"] / motorData[mtr]["MaxTorqueNewtonmeters"]]
 	for mtr in motorNames]...)
 
 # Select first two cols to keep it simple for now
@@ -35,10 +36,11 @@ model = Model(with_optimizer(Gurobi.Optimizer, Presolve=1))
 
 (numRows, numCols) = size(F_m)
 
-τRow = [1 0 0 0]
-ωRow = [0 1 0 0]
-priceRow = [0 0 1 0]
-massRow = [0 0 0 1]
+τRow = [1 0 0 0 0]
+ωRow = [0 1 0 0 0]
+priceRow = [0 0 1 0 0]
+massRow = [0 0 0 1 0]
+omegaFuncRow = [0 0 0 0 1]
 
 # Each slot is a binary vector with a 1 that picks which motor to use.
 @variable(model, slot1[1:numCols], Bin)
@@ -52,20 +54,51 @@ massRow = [0 0 0 1]
 
 allSlots = [slot1, slot2, slot3]
 
+"""
+	@ω(τ::Array{GenericAffExpr{Float64,VariableRef},1}, i::Int64)
+
+Calculate the rotational speed given the applied torque `τ` for the motor in
+slot `i`.
+"""
+ω(τ::Array{GenericAffExpr{Float64,VariableRef},1}, i::Int64) =
+	(τRow * F_m * allSlots[i] - τ) * omegaFuncRow * F_m * allSlots[i]
+
+"""
+	@ω(τ::Float64, i::Int64)
+
+Calculate the rotational speed given the applied torque `τ` for the motor in
+slot `i`.
+"""
+ω(τ::Float64, i::Int64) =
+	(τRow * F_m * allSlots[i] .- τ) * omegaFuncRow * F_m * allSlots[i]
+
 # Equation 3
-@constraint(model, eq3, τRow * F_m * slot1 .>=
-                        tipForce * (linkDhA[1] + linkDhA[2] + linkDhA[3]) +
-                        gravity * (massRow * F_m * slot2 * linkDhA[1] +
-                        massRow * F_m * slot3 * (linkDhA[1] + linkDhA[2])))
+# linkDhA[1] is 0 which makes this boring
+@expression(model, τ1Required, tipForce * (linkDhA[1] + linkDhA[2] + linkDhA[3]) +
+							   gravity * (massRow * F_m * slot2 * linkDhA[1] +
+							   massRow * F_m * slot3 * (linkDhA[1] + linkDhA[2])))
+@constraint(model, eq3, τRow * F_m * slot1 .>= τ1Required)
 
 # Equation 4
-@constraint(model, eq4, τRow * F_m * slot2 .>=
-                        tipForce * (linkDhA[2] + linkDhA[3]) +
-                        massRow * F_m * slot3 * gravity * linkDhA[2])
+@expression(model, τ2Required, tipForce * (linkDhA[2] + linkDhA[3]) +
+							   massRow * F_m * slot3 * gravity * linkDhA[2])
+@constraint(model, eq4, τRow * F_m * slot2 .>= τ2Required)
 
 # Equation 5
-@constraint(model, eq5, τRow * F_m * slot3 .>=
-                        tipForce * linkDhA[3])
+@expression(model, τ3Required, tipForce * linkDhA[3])
+@constraint(model, eq5, τRow * F_m * slot3 .>= τ3Required)
+
+# Equation 6
+@expression(model, ω1Required, tipVelocity / (linkDhA[1] + linkDhA[2] + linkDhA[3]))
+@constraint(model, eq6, ω(τ1Required, 1) .>= ω1Required)
+
+# Equation 7
+@expression(model, ω2Required, tipVelocity / (linkDhA[2] + linkDhA[3]))
+@constraint(model, eq7, ω(τ2Required, 1) .>= ω2Required)
+
+# Equation 8
+@expression(model, ω3Required, tipVelocity / linkDhA[3])
+@constraint(model, eq8, ω(τ3Required, 1) .>= ω3Required)
 
 @objective(model, Min, sum(x -> priceRow * F_m * x, allSlots)[1])
 
