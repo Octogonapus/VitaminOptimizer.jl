@@ -7,7 +7,8 @@ tipForce = j["requiredTipForceNewtons"]
 limb = j["HephaestusArmLimbOne"]
 limbConfig = limb["min"]
 linkNames = sort(collect(keys(limbConfig)), by=x -> limbConfig[x]["index"])
-linkDhA = [limbConfig[name]["dh-A"] for name=linkNames]
+# Convert millimeters to meters
+linkDhA = [limbConfig[name]["dh-A"] / 1000 for name=linkNames]
 
 j = JSON.parsefile("res/motorOptions.json")
 motorData = j["data"]
