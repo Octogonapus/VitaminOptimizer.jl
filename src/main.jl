@@ -12,7 +12,7 @@ linkDhA = [limbConfig[name]["dh-A"] / 1000 for name=linkNames]
 
 j = JSON.parsefile("res/motorOptions.json")
 motorData = j["data"]
-motorNames = keys(motorData)
+motorNames = collect(keys(motorData))
 F_m = hcat([
 	[motorData[mtr]["MaxTorqueNewtonmeters"],
 	 motorData[mtr]["MaxFreeSpeedRadPerSec"],
@@ -23,7 +23,7 @@ F_m = hcat([
 # Select first two cols to keep it simple for now
 # F_m = F_m[:, 1:2]
 
-gravity = 9.81
+gravity = 9.80665
 
 env = Gurobi.Env()
 setparam!(env, "LogFile",
@@ -50,6 +50,8 @@ massRow = [0 0 0 1]
 @variable(model, slot3[1:numCols], Bin)
 @constraint(model, slot3Unique, sum(slot3) == 1)
 
+allSlots = [slot1, slot2, slot3]
+
 # Equation 3
 @constraint(model, eq3, τRow * F_m * slot1 .>=
                         tipForce * (linkDhA[1] + linkDhA[2] + linkDhA[3]) +
@@ -65,10 +67,14 @@ massRow = [0 0 0 1]
 @constraint(model, eq5, τRow * F_m * slot3 .>=
                         tipForce * linkDhA[3])
 
-@objective(model, Min, sum(x -> priceRow * F_m * x, [slot1, slot2, slot3])[1])
+@objective(model, Min, sum(x -> priceRow * F_m * x, allSlots)[1])
 
 optimize!(model)
 
 println("Optimal objective: ", objective_value(model),
 	". slot1 = ", value.(slot1), ", slot2 = ", value.(slot2),
 	", slot3 = ", value.(slot3))
+
+optimalMotorIndices = [findfirst(isequal(1), value.(slot)) for slot in allSlots]
+optimalMotorNames = [motorNames[i] for i in optimalMotorIndices]
+println("Optimal motors: ", optimalMotorNames)
