@@ -1,4 +1,4 @@
-import JSON
+import JSON, GLPK
 using JuMP, Gurobi
 
 j = JSON.parsefile("res/constraints1.json")
@@ -20,7 +20,7 @@ F_m = hcat([
 	for mtr in motorNames]...)
 
 # Select first two cols to keep it simple for now
-F_m = F_m[:, 1:2]
+# F_m = F_m[:, 1:2]
 
 gravity = 9.81
 
@@ -30,6 +30,7 @@ setparam!(env, "LogFile",
 
 # pass params as keyword arguments to GurobiSolver
 model = Model(with_optimizer(Gurobi.Optimizer, Presolve=1))
+# model = Model(with_optimizer(GLPK.Optimizer))
 
 (numRows, numCols) = size(F_m)
 
@@ -63,12 +64,10 @@ massRow = [0 0 0 1]
 @constraint(model, eq5, τRow * F_m * slot3 .>=
                         tipForce * linkDhA[3])
 
-@objective(model, Min, priceRow * F_m * slot1 +
-					   priceRow * F_m * slot2 +
-					   priceRow * F_m * slot3)
+@objective(model, Min, sum(x -> priceRow * F_m * x, [slot1, slot2, slot3])[1])
 
 optimize!(model)
-# println("Optimal objective value: ", objective_value(model))
-# println("Optimal objective: ", objective_value(model),
-# 	". slot1 = ", value.(slot1), ", slot2 = ", value.(slot2),
-# 	", slot3 = ", value.(slot3))
+
+println("Optimal objective: ", objective_value(model),
+	". slot1 = ", value.(slot1), ", slot2 = ", value.(slot2),
+	", slot3 = ", value.(slot3))
