@@ -1,0 +1,54 @@
+{
+ "requiredTipVelocityMeterPerSec":0.1,
+ "requiredTipForceNewtons":4.90332,
+ "maximumPrice":120.0,
+ "gearRatio":2.3333,
+ "HephaestusArmLimbOne": {
+   "min": {
+    "basePan": {
+    	"index":0,
+      "dh-D": 135.0,
+      "dh-A": 0.0,
+      "dh-Alpha": -90.0,
+      "dh-Theta": 0.0
+    },
+    "elbow": {
+    	"index":2,
+      "dh-D": 0.0,
+      "dh-A": 169.28,
+      "dh-Alpha": 0.0,
+      "dh-Theta": 90.0
+    },
+    "baseTilt": {
+    	"index":1,
+      "dh-D": 0.0,
+      "dh-A": 175.0,
+      "dh-Alpha": 0.0,
+      "dh-Theta": 0.0
+    }
+   },
+  "max": {
+    "basePan": {
+    	"index":0,
+      "dh-D": 135.0,
+      "dh-A": 0.0,
+      "dh-Alpha": -90.0,
+      "dh-Theta": 0.0
+    },
+    "elbow": {
+    	"index":2,
+      "dh-D": 0.0,
+      "dh-A": 169.28,
+      "dh-Alpha": 0.0,
+      "dh-Theta": 90.0
+    },
+    "baseTilt": {
+    	"index":1,
+      "dh-D": 0.0,
+      "dh-A": 175.0,
+      "dh-Alpha": 0.0,
+      "dh-Theta": 0.0
+    }
+   }
+  }
+}
