@@ -61,7 +61,7 @@ Calculate the rotational speed given the applied torque `τ` for the motor in
 slot `i`.
 """
 ω(τ::Array{GenericAffExpr{Float64,VariableRef},1}, i::Int64) =
-	(τRow * F_m * allSlots[i] - τ) * omegaFuncRow * F_m * allSlots[i]
+	((τRow * F_m * allSlots[i]) - τ) * (omegaFuncRow * F_m * allSlots[i])
 
 """
 	@ω(τ::Float64, i::Int64)
@@ -70,7 +70,7 @@ Calculate the rotational speed given the applied torque `τ` for the motor in
 slot `i`.
 """
 ω(τ::Float64, i::Int64) =
-	(τRow * F_m * allSlots[i] .- τ) * omegaFuncRow * F_m * allSlots[i]
+	((τRow * F_m * allSlots[i]) .- τ) * (omegaFuncRow * F_m * allSlots[i])
 
 # Equation 3
 # linkDhA[1] is 0 which makes this boring
@@ -90,15 +90,15 @@ slot `i`.
 
 # Equation 6
 @expression(model, ω1Required, tipVelocity / (linkDhA[1] + linkDhA[2] + linkDhA[3]))
-@constraint(model, eq6, ω(τ1Required, 1) .>= ω1Required)
+@constraint(model, eq6, ωRow * F_m * slot1 .>= ω1Required)
 
 # Equation 7
 @expression(model, ω2Required, tipVelocity / (linkDhA[2] + linkDhA[3]))
-@constraint(model, eq7, ω(τ2Required, 2) .>= ω2Required)
+@constraint(model, eq7, ωRow * F_m * slot2 .>= ω2Required)
 
 # Equation 8
 @expression(model, ω3Required, tipVelocity / linkDhA[3])
-@constraint(model, eq8, ω(τ3Required, 3) .>= ω3Required)
+@constraint(model, eq8, ωRow * F_m * slot3 .>= ω3Required)
 
 @objective(model, Min, sum(x -> priceRow * F_m * x, allSlots)[1])
 
