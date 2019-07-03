@@ -13,13 +13,16 @@ linkDhA = [limbConfig[name]["dh-A"] / 1000 for name=linkNames]
 j = JSON.parsefile("res/motorOptions.json")
 motorData = j["data"]
 motorNames = collect(keys(motorData))
+gearRatios = [1, 1/3, 1/5]
+# Take the coproduct of motors with gear ratios to generate all possible combinations.
+motorNamesWithRatios = [(name, ratio) for name in motorNames, ratio in gearRatios]
 F_m = hcat([
-	[motorData[mtr]["MaxTorqueNewtonmeters"],
-	 motorData[mtr]["MaxFreeSpeedRadPerSec"],
+	[motorData[mtr]["MaxTorqueNewtonmeters"] / ratio,
+	 motorData[mtr]["MaxFreeSpeedRadPerSec"] * ratio,
 	 motorData[mtr]["price"],
 	 motorData[mtr]["massKg"],
-	 motorData[mtr]["MaxFreeSpeedRadPerSec"] / motorData[mtr]["MaxTorqueNewtonmeters"]]
-	for mtr in motorNames]...)
+	 (motorData[mtr]["MaxFreeSpeedRadPerSec"] * ratio) / (motorData[mtr]["MaxTorqueNewtonmeters"] / ratio)]
+	for (mtr, ratio) in motorNamesWithRatios]...)
 
 # Select first two cols to keep it simple for now
 # F_m = F_m[:, 1:2]
@@ -109,5 +112,5 @@ println("Optimal objective: ", objective_value(model),
 	", slot3 = ", value.(slot3))
 
 optimalMotorIndices = [findfirst(isequal(1), value.(slot)) for slot in allSlots]
-optimalMotorNames = [motorNames[i] for i in optimalMotorIndices]
+optimalMotorNames = [motorNamesWithRatios[i] for i in optimalMotorIndices]
 println("Optimal motors: ", optimalMotorNames)
