@@ -94,11 +94,11 @@ slot `i`.
 
 # Equation 7
 @expression(model, ω2Required, tipVelocity / (linkDhA[2] + linkDhA[3]))
-@constraint(model, eq7, ω(τ2Required, 1) .>= ω2Required)
+@constraint(model, eq7, ω(τ2Required, 2) .>= ω2Required)
 
 # Equation 8
 @expression(model, ω3Required, tipVelocity / linkDhA[3])
-@constraint(model, eq8, ω(τ3Required, 1) .>= ω3Required)
+@constraint(model, eq8, ω(τ3Required, 3) .>= ω3Required)
 
 @objective(model, Min, sum(x -> priceRow * F_m * x, allSlots)[1])
 
