@@ -1,0 +1,31 @@
+{
+  "data": {
+    "stepperMotor-GenericNEMA14": {
+      "MaxTorqueNewtonmeters": 0.098,
+      "price": 12.95,
+      "MaxFreeSpeedRadPerSec": 139.626,
+      "massKg": 0.12
+    },
+    "stepperMotor-GenericNEMA17": {
+      "MaxTorqueNewtonmeters": 0.3108,
+      "price": 19.95,
+      "MaxFreeSpeedRadPerSec": 87.2665,
+      "massKg": 0.365
+    },
+    "roundMotor-WPI-gb37y3530-50en": {
+      "MaxTorqueNewtonmeters": 1.4123,
+      "price": 38.95,
+      "MaxFreeSpeedRadPerSec": 20.943,
+      "massKg": 0.203
+    }
+  },
+  "motors": {
+    "roundMotor": [
+      "WPI-gb37y3530-50en"
+    ],
+    "stepperMotor": [
+      "GenericNEMA14",
+      "GenericNEMA17"
+    ]
+  }
+}

@@ -1,5 +1,6 @@
 import JSON, GLPK
-using JuMP, Gurobi
+using JuMP
+# using Gurobi
 
 j = JSON.parsefile("res/constraints1.json")
 tipVelocity = j["requiredTipVelocityMeterPerSec"]
@@ -29,13 +30,12 @@ F_m = hcat([
 
 const gravity = 9.80665
 
-env = Gurobi.Env()
-setparam!(env, "LogFile",
-		  "/home/salmon/Documents/auto-configured-vitamins-optimizer/main.log")
+# env = Gurobi.Env()
+# setparam!(env, "LogFile",
+# 		  "/home/salmon/Documents/auto-configured-vitamins-optimizer/main.log")
 
-# pass params as keyword arguments to GurobiSolver
-model = Model(with_optimizer(Gurobi.Optimizer, Presolve=1))
-# model = Model(with_optimizer(GLPK.Optimizer))
+# model = Model(with_optimizer(Gurobi.Optimizer, Presolve=1))
+model = Model(with_optimizer(GLPK.Optimizer))
 
 (numRows, numCols) = size(F_m)
 
