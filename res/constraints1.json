@@ -1,5 +1,5 @@
 {
- "requiredTipVelocityMeterPerSec":0.1,
+ "requiredTipVelocityMeterPerSec":1.0,
  "requiredTipForceNewtons":4.90332,
  "maximumPrice":120.0,
  "gearRatio":2.3333,

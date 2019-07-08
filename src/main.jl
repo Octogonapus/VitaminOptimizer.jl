@@ -13,7 +13,7 @@ linkDhA = [limbConfig[name]["dh-A"] / 1000 for name=linkNames]
 j = JSON.parsefile("res/motorOptions.json")
 motorData = j["data"]
 motorNames = collect(keys(motorData))
-gearRatios = [1, 1/3, 1/5]
+gearRatios = [7, 5, 3, 1, 1/3, 1/5, 1/7]
 # Take the coproduct of motors with gear ratios to generate all possible combinations.
 motorNamesWithRatios = [(name, ratio) for name in motorNames, ratio in gearRatios]
 F_m = hcat([
@@ -27,7 +27,7 @@ F_m = hcat([
 # Select first two cols to keep it simple for now
 # F_m = F_m[:, 1:2]
 
-gravity = 9.80665
+const gravity = 9.80665
 
 env = Gurobi.Env()
 setparam!(env, "LogFile",
