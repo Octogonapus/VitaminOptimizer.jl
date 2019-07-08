@@ -1,10 +1,11 @@
 import JSON
 
 struct Motor
+    name::String
     τStall::Float64 # Units Nm
     ωFree::Float64  # Units rad/s
-    mass::Float64   # Units kg
     price::Float64  # Units usd
+    mass::Float64   # Units kg
 end
 
 function parseMotorOptions!(fileName::String)::Array{Motor, 1}
@@ -24,13 +25,15 @@ function parseMotorClass(
     json::Dict{String, Any},
     className::String,
     members::Array{String, 1})
-    return [parseMotor(json["data"][className * "-" * member]) for member=members]
+    return [parseMotor(className * "-" * member,
+            json["data"][className * "-" * member]) for member=members]
 end
 
-function parseMotor(motorData::Dict{String, Any})
+function parseMotor(name::String, motorData::Dict{String, Any})
     return Motor(
+        name,
         motorData["MaxTorqueNewtonmeters"],
         motorData["MaxFreeSpeedRadPerSec"],
-        motorData["massKg"],
-        motorData["price"])
+        motorData["price"],
+        motorData["massKg"])
 end
