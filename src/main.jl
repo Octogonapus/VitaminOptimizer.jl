@@ -111,21 +111,30 @@ optimize!(model)
 # optimalMotors = [motors[i] for i in optimalMotorIndices]
 # println("Optimal motors: ", optimalMotors)
 
-function printOptimizationResult()
-	# [println("slot", i, " = ", value.(allSlots[i])) for i in 1:numSlots]
+function findMotorIndex(featureMatrixColumn)
+	return findfirst(
+		x::Motor -> x.τStall ≈ featureMatrixColumn[1] * featureMatrixColumn[6] &&
+			x.ωFree ≈ featureMatrixColumn[2] / featureMatrixColumn[6] &&
+			x.price == featureMatrixColumn[3] &&
+			x.mass == featureMatrixColumn[4],
+		motors)
+end
+
+function printOptimizationResult!()
 	optimalMotorIndices = [findfirst(isequal(1), value.(slot)) for slot in allSlots]
-	optimalMotors = [F_m[:, i] for i in optimalMotorIndices]
+	optimalMotorColumns = [F_m[:, i] for i in optimalMotorIndices]
+	optimalMotors = [motors[findMotorIndex(col)] for col in optimalMotorColumns]
 	println("Optimal objective: ", objective_value(model))
 	println("Optimal motors: ", optimalMotors)
 end
 
 if termination_status(model) == MOI.OPTIMAL
-	printOptimizationResult()
+	printOptimizationResult!()
 elseif termination_status(model) == MOI.TIME_LIMIT && has_values(model)
 	println("-------------------------------------------------------")
 	println("-------------------SUBOPTIMAL RESULT-------------------")
 	println("-------------------------------------------------------")
-	printOptimizationResult()
+	printOptimizationResult!()
 else
     error("The model was not solved correctly.")
 end

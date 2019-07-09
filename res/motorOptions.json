@@ -66,12 +66,6 @@
       "MaxFreeSpeedRadPerSec": 10.5,
       "massKg": 0.014
     },
-    "hobbyServo-tproSG90": {
-      "MaxTorqueNewtonmeters": 0.245,
-      "price": 1.49,
-      "MaxFreeSpeedRadPerSec": 10.5,
-      "massKg": 0.014
-    },
     "vexMotor-393": {
       "MaxTorqueNewtonmeters": 1.637,
       "price": 14.99,
@@ -97,7 +91,6 @@
       "standard",
       "hv6214mg",
       "DHV56mg_sub_Micro",
-      "tproSG90",
       "towerProMG91",
       "tproTG90",
       "hv5932mg"
