@@ -1,7 +1,7 @@
 module VitaminOptimizer
 
 import JSON, GLPK
-using JuMP, Gurobi, LinearAlgebra
+using JuMP, LinearAlgebra
 
 include("parseConstraints.jl")
 include("parseMotorOptions.jl")
@@ -135,13 +135,6 @@ function buildAndOptimizeModel!(model, limb, limbConfig, motors, gearRatios)
 	end
 end
 
-function makeGurobiModel!(maxNumSolutions::Int64)::Model
-	env = Gurobi.Env()
-	setparam!(env, "PoolSearchMode", 2)
-	setparam!(env, "PoolSolutions", 10)
-	return Model(with_optimizer(Gurobi.Optimizer, env, Presolve=1))
-end
-
 function makeGLPKModel()::Model
 	return Model(with_optimizer(GLPK.Optimizer))
 end
@@ -180,7 +173,6 @@ function loadAndOptimize!(model::Model,
 end
 
 export loadAndOptimize!
-export makeGurobiModel!
 export makeGLPKModel
 
 end # module VitaminOptimizer
