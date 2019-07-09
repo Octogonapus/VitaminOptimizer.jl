@@ -10,7 +10,7 @@ limb = parseConstraints!("res/constraints1.json", ["HephaestusArmLimbOne"])
 limbConfig = limb.minLinks
 
 motors = parseMotorOptions!("res/motorOptions.json")
-gearRatios = [7, 5, 3, 1, 1/3, 1/5, 1/7]
+gearRatios = [15, 13, 11, 9, 7, 5, 3, 1, 1/3, 1/5, 1/7, 1/9, 1/11, 1/13, 1/15]
 F_m = constructMotorFeatureMatrix(motors, gearRatios)
 
 const gravity = 9.80665
