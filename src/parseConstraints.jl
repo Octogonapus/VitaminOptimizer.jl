@@ -27,22 +27,28 @@ struct Link
 end
 
 struct Limb
+    name::String
     maxLinks::Tuple{Vararg{Link}}
     minLinks::Tuple{Vararg{Link}}
     tipVelocity::Float64 # Units m/s
     tipForce::Float64    # Units N
 end
 
-function parseConstraints!(fileName::String, limbNames::Array{String, 1})::Limb
+function parseConstraints!(fileName::String, limbNames::Array{String, 1})::Array{Limb, 1}
     return parseConstraints(JSON.parsefile(fileName), limbNames)
 end
 
-function parseConstraints(json::Dict{String, Any}, limbNames::Array{String, 1})::Limb
+function parseConstraints(json::Dict{String, Any}, limbNames::Array{String, 1})::Array{Limb, 1}
+    return [parseLimb(json, name) for name in limbNames]
+end
+
+function parseLimb(json::Dict{String, Any}, limbName::String)
     tipVelocity = json["requiredTipVelocityMeterPerSec"]
     tipForce = json["requiredTipForceNewtons"]
-    limb = json["HephaestusArmLimbOne"]
-    (maxConfig, minConfig) = parseLimb(limb)
+    limb = json[limbName]
+    (maxConfig, minConfig) = parseLimbConfig(limb)
     return Limb(
+        limbName,
         maxConfig,
         minConfig,
         tipVelocity,
@@ -50,13 +56,13 @@ function parseConstraints(json::Dict{String, Any}, limbNames::Array{String, 1}):
     )
 end
 
-function parseLimb(limb::Dict{String, Any})
-    minConfig = parseLimbConfig(limb["min"])
-    maxConfig = parseLimbConfig(limb["max"])
+function parseLimbConfig(limb::Dict{String, Any})
+    minConfig = parseLinks(limb["min"])
+    maxConfig = parseLinks(limb["max"])
     return (maxConfig, minConfig)
 end
 
-function parseLimbConfig(config::Dict{String, Any})::Tuple{Vararg{Link}}
+function parseLinks(config::Dict{String, Any})::Tuple{Vararg{Link}}
     links = sort(collect(values(config)), by=x -> x["index"])
     return tuple(map(x -> Link(parseDhParam(x)), links)...)
 end

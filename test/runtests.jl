@@ -1,5 +1,6 @@
-tests = ["featureMatrixTest.jl",
-         "parseConstraintsTest.jl",
+tests = ["featureMatrixTest.jl"
+         "optimizerTest.jl"
+         "parseConstraintsTest.jl"
          "parseMotorOptionsTest.jl"]
 
 for test in tests
