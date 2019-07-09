@@ -1,6 +1,6 @@
 import JSON, GLPK
-using JuMP
-# using Gurobi
+using JuMP, LinearAlgebra
+using Gurobi
 
 include("parseConstraints.jl")
 include("parseMotorOptions.jl")
@@ -10,19 +10,13 @@ limb = parseConstraints!("res/constraints1.json", ["HephaestusArmLimbOne"])
 limbConfig = limb.minLinks
 
 motors = parseMotorOptions!("res/motorOptions.json")
-gearRatios = [15, 13, 11, 9, 7, 5, 3, 1, 1/3, 1/5, 1/7, 1/9, 1/11, 1/13, 1/15]
+ratios = collect(range(1, step=2, length=30))
+gearRatios = Set(hcat(ratios, 1 ./ ratios))
 F_m = constructMotorFeatureMatrix(motors, gearRatios)
+(numRows, numCols) = size(F_m)
 
-const gravity = 9.80665
-
-# env = Gurobi.Env()
-# setparam!(env, "LogFile",
-# 		  "/home/salmon/Documents/auto-configured-vitamins-optimizer/main.log")
-#
 # model = Model(with_optimizer(Gurobi.Optimizer, Presolve=1))
 model = Model(with_optimizer(GLPK.Optimizer))
-
-(numRows, numCols) = size(F_m)
 
 # Each slot is a binary vector with a 1 that picks which motor to use.
 @variable(model, slot1[1:numCols], Bin)
@@ -37,20 +31,24 @@ model = Model(with_optimizer(GLPK.Optimizer))
 allSlots = [slot1, slot2, slot3]
 numSlots = length(allSlots)
 
-τRow = [1 0 0 0 0]
+featureIdentity = Matrix{Float64}(I, numRows, numRows)
+τRow = transpose(featureIdentity[1,:])
 slotτ(i) = τRow * F_m * allSlots[i]
 
-ωRow = [0 1 0 0 0]
+ωRow = transpose(featureIdentity[2,:])
 slotω(i) = ωRow * F_m * allSlots[i]
 
-priceRow = [0 0 1 0 0]
+priceRow = transpose(featureIdentity[3,:])
 slotPrice(i) = priceRow * F_m * allSlots[i]
 
-massRow = [0 0 0 1 0]
+massRow = transpose(featureIdentity[4,:])
 slotMass(i) = massRow * F_m * allSlots[i]
 
-omegaFuncRow = [0 0 0 0 1]
+omegaFuncRow = transpose(featureIdentity[5,:])
 slotOmegaFunc(i) = omegaFuncRow * F_m * allSlots[i]
+
+gearRatioRow = transpose(featureIdentity[6,:])
+slotGearRatioFunc(i) = gearRatioRow * F_m * allSlots[i]
 
 """
 	@ω(τ::Array{GenericAffExpr{Float64,VariableRef},1}, i)
@@ -67,6 +65,8 @@ Calculate the rotational speed given the applied torque `τ` for the motor in
 slot `i`.
 """
 ω(τ::Float64, i) = (slotτ(i) .- τ) * slotOmegaFunc(i)
+
+const gravity = 9.80665
 
 # Equation 3
 # limbConfig[1].dhParam.alpha is 0 which makes this boring
@@ -85,20 +85,20 @@ slot `i`.
 @expression(model, τ3Required, limb.tipForce * limbConfig[3].dhParam.alpha)
 @constraint(model, eq5, slotτ(3) .>= τ3Required)
 
-# Equation 6
-@expression(model, ω1Required, limb.tipVelocity / (limbConfig[1].dhParam.alpha + limbConfig[2].dhParam.alpha +
- 									limbConfig[3].dhParam.alpha))
-@constraint(model, eq6, slotω(1) .>= ω1Required)
+# # Equation 6
+# @expression(model, ω1Required, limb.tipVelocity / (limbConfig[1].dhParam.alpha + limbConfig[2].dhParam.alpha +
+#  									limbConfig[3].dhParam.alpha))
+# @constraint(model, eq6, slotω(1) .>= ω1Required)
+#
+# # Equation 7
+# @expression(model, ω2Required, limb.tipVelocity / (limbConfig[2].dhParam.alpha + limbConfig[3].dhParam.alpha))
+# @constraint(model, eq7, slotω(2) .>= ω2Required)
+#
+# # Equation 8
+# @expression(model, ω3Required, limb.tipVelocity / limbConfig[3].dhParam.alpha)
+# @constraint(model, eq8, slotω(3) .>= ω3Required)
 
-# Equation 7
-@expression(model, ω2Required, limb.tipVelocity / (limbConfig[2].dhParam.alpha + limbConfig[3].dhParam.alpha))
-@constraint(model, eq7, slotω(2) .>= ω2Required)
-
-# Equation 8
-@expression(model, ω3Required, limb.tipVelocity / limbConfig[3].dhParam.alpha)
-@constraint(model, eq8, slotω(3) .>= ω3Required)
-
-@objective(model, Min, sum(x -> slotPrice(x), collect(1:numSlots))[1])
+@objective(model, Min, sum(x -> slotPrice(x), collect(1:numSlots)))
 
 optimize!(model)
 
@@ -112,9 +112,9 @@ optimize!(model)
 # println("Optimal motors: ", optimalMotors)
 
 function printOptimizationResult()
-	[println("slot", i, " = ", value.(allSlots[i])) for i in 1:numSlots]
+	# [println("slot", i, " = ", value.(allSlots[i])) for i in 1:numSlots]
 	optimalMotorIndices = [findfirst(isequal(1), value.(slot)) for slot in allSlots]
-	optimalMotors = [motors[i] for i in optimalMotorIndices]
+	optimalMotors = [F_m[:, i] for i in optimalMotorIndices]
 	println("Optimal objective: ", objective_value(model))
 	println("Optimal motors: ", optimalMotors)
 end

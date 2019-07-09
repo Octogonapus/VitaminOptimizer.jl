@@ -4,6 +4,7 @@ function constructMotorFeatureMatrix(motors, gearRatios)
      	 motor.ωFree * ratio
     	 motor.price
     	 motor.mass
-         (motor.ωFree * ratio) / (motor.τStall / ratio)]
+         (motor.ωFree * ratio) / (motor.τStall / ratio)
+         ratio]
         for motor in motors, ratio in gearRatios]...)
 end

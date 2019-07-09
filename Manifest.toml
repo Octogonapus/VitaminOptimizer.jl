@@ -75,6 +75,12 @@ git-tree-sha1 = "b12093a67c3007b69d5403625d1920d59c16ac61"
 uuid = "60bf3e95-4087-53dc-ae20-288a0d20c6a6"
 version = "0.10.0"
 
+[[Gurobi]]
+deps = ["Compat", "Libdl", "LinQuadOptInterface", "MathProgBase"]
+git-tree-sha1 = "c2e1b1d4ce50764188c6496f298fa58bbf5e923e"
+uuid = "2e9cd046-0924-5485-92f1-d5272153d98b"
+version = "0.6.0"
+
 [[InteractiveUtils]]
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
@@ -119,6 +125,12 @@ deps = ["Compat", "Unicode"]
 git-tree-sha1 = "5d3de69c9220610d0336ab45d3eb8b6ac7a7c807"
 uuid = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 version = "0.8.4"
+
+[[MathProgBase]]
+deps = ["Compat"]
+git-tree-sha1 = "3bf2e534e635df810e5f4b4f1a8b6de9004a0d53"
+uuid = "fdba3010-5040-5b88-9595-932c9decdf73"
+version = "0.7.7"
 
 [[Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
