@@ -24,12 +24,6 @@ model = Model(with_optimizer(GLPK.Optimizer))
 
 (numRows, numCols) = size(F_m)
 
-τRow = [1 0 0 0 0]
-ωRow = [0 1 0 0 0]
-priceRow = [0 0 1 0 0]
-massRow = [0 0 0 1 0]
-omegaFuncRow = [0 0 0 0 1]
-
 # Each slot is a binary vector with a 1 that picks which motor to use.
 @variable(model, slot1[1:numCols], Bin)
 @constraint(model, slot1Unique, sum(slot1) == 1)
@@ -43,14 +37,23 @@ omegaFuncRow = [0 0 0 0 1]
 allSlots = [slot1, slot2, slot3]
 numSlots = length(allSlots)
 
+τRow = [1 0 0 0 0]
 slotτ(i) = τRow * F_m * allSlots[i]
+
+ωRow = [0 1 0 0 0]
 slotω(i) = ωRow * F_m * allSlots[i]
+
+priceRow = [0 0 1 0 0]
 slotPrice(i) = priceRow * F_m * allSlots[i]
+
+massRow = [0 0 0 1 0]
 slotMass(i) = massRow * F_m * allSlots[i]
+
+omegaFuncRow = [0 0 0 0 1]
 slotOmegaFunc(i) = omegaFuncRow * F_m * allSlots[i]
 
 """
-	@ω(τ::Array{GenericAffExpr{Float64,VariableRef},1}, i::Int64)
+	@ω(τ::Array{GenericAffExpr{Float64,VariableRef},1}, i)
 
 Calculate the rotational speed given the applied torque `τ` for the motor in
 slot `i`.
@@ -58,7 +61,7 @@ slot `i`.
 ω(τ::Array{GenericAffExpr{Float64,VariableRef},1}, i) = (slotτ(i) - τ) * slotOmegaFunc(i)
 
 """
-	@ω(τ::Float64, i::Int64)
+	@ω(τ::Float64, i)
 
 Calculate the rotational speed given the applied torque `τ` for the motor in
 slot `i`.
