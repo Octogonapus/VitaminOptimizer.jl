@@ -2,9 +2,24 @@ import JSON
 
 struct DhParam
     d::Float64     # Units m
-    theta::Float64 # Units deg
+    θ::Float64 # Units deg
     r::Float64     # Units m
-    alpha::Float64 # Units deg
+    α::Float64 # Units deg
+end
+
+function Base.show(io::IO, dhParam::DhParam)
+    print(
+        io,
+        "DhParam(d=",
+        dhParam.d,
+        ", θ=",
+        dhParam.θ,
+        ", r=",
+        dhParam.r,
+        ", α=",
+        dhParam.α,
+        ")"
+    )
 end
 
 struct Link
