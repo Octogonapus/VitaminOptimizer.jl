@@ -102,11 +102,30 @@ slot `i`.
 
 optimize!(model)
 
-println("Optimal objective: ", objective_value(model))
-println("slot1 = ", value.(slot1))
-println("slot2 = ", value.(slot2))
-println("slot3 = ", value.(slot3))
+# println("Optimal objective: ", objective_value(model))
+# println("slot1 = ", value.(slot1))
+# println("slot2 = ", value.(slot2))
+# println("slot3 = ", value.(slot3))
+#
+# optimalMotorIndices = [findfirst(isequal(1), value.(slot)) for slot in allSlots]
+# optimalMotors = [motors[i] for i in optimalMotorIndices]
+# println("Optimal motors: ", optimalMotors)
 
-optimalMotorIndices = [findfirst(isequal(1), value.(slot)) for slot in allSlots]
-optimalMotors = [motors[i] for i in optimalMotorIndices]
-println("Optimal motors: ", optimalMotors)
+function printOptimizationResult()
+	[println("slot", i, " = ", value.(allSlots[i])) for i in 1:numSlots]
+	optimalMotorIndices = [findfirst(isequal(1), value.(slot)) for slot in allSlots]
+	optimalMotors = [motors[i] for i in optimalMotorIndices]
+	println("Optimal objective: ", objective_value(model))
+	println("Optimal motors: ", optimalMotors)
+end
+
+if termination_status(model) == MOI.OPTIMAL
+	printOptimizationResult()
+elseif termination_status(model) == MOI.TIME_LIMIT && has_values(model)
+	println("-------------------------------------------------------")
+	println("-------------------SUBOPTIMAL RESULT-------------------")
+	println("-------------------------------------------------------")
+	printOptimizationResult()
+else
+    error("The model was not solved correctly.")
+end
