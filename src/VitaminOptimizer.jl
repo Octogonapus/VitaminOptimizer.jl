@@ -124,7 +124,7 @@ function buildAndOptimizeModel!(model, limb, limbConfig, motors, gearRatios)
 	else
 		optimalMotors = findOptimalMotors()
 
-		if termination_status(model) == MOI.TIME_LIMIT && has_values(model)
+		if termination_status(model) == MOI.TIME_LIMIT
 			println("-------------------------------------------------------")
 			println("-------------------SUBOPTIMAL RESULT-------------------")
 			println("-------------------------------------------------------")
