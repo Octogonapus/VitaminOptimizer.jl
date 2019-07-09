@@ -8,7 +8,7 @@
     "basePan": {
     	"index":0,
       "dh-D": 135.0,
-      "dh-A": 0.0,
+      "dh-A": 50.0,
       "dh-Alpha": -90.0,
       "dh-Theta": 0.0
     },

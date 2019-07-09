@@ -1,6 +1,5 @@
 import JSON, GLPK
-using JuMP, LinearAlgebra
-using Gurobi
+using JuMP, Gurobi, LinearAlgebra
 
 include("parseConstraints.jl")
 include("parseMotorOptions.jl")
@@ -15,7 +14,11 @@ gearRatios = Set(hcat(ratios, 1 ./ ratios))
 F_m = constructMotorFeatureMatrix(motors, gearRatios)
 (numRows, numCols) = size(F_m)
 
-model = Model(with_optimizer(Gurobi.Optimizer, Presolve=1))
+env = Gurobi.Env()
+setparam!(env, "PoolSearchMode", 2)
+setparam!(env, "PoolSolutions", 10)
+model = Model(with_optimizer(Gurobi.Optimizer, env, Presolve=1))
+# model = Gurobi.Model(env, "vo_01")
 # model = Model(with_optimizer(GLPK.Optimizer))
 
 # Each slot is a binary vector with a 1 that picks which motor to use.
@@ -69,7 +72,6 @@ slot `i`.
 const gravity = 9.80665
 
 # Equation 3
-# limbConfig[1].dhParam.r is 0 which makes this boring
 @expression(model, τ1Required, limb.tipForce * (limbConfig[1].dhParam.r + limbConfig[2].dhParam.r +
  							   		limbConfig[3].dhParam.r) +
 							   gravity * (slotMass(2) * limbConfig[1].dhParam.r +
@@ -114,9 +116,12 @@ end
 function printOptimizationResult!()
 	optimalMotorIndices = [findfirst(isequal(1), value.(slot)) for slot in allSlots]
 	optimalMotorColumns = [F_m[:, i] for i in optimalMotorIndices]
-	optimalMotors = [motors[findMotorIndex(col)] for col in optimalMotorColumns]
+	optimalMotors = [(motors[findMotorIndex(col)], col[6]) for col in optimalMotorColumns]
 	println("Optimal objective: ", objective_value(model))
-	println("Optimal motors: ", optimalMotors)
+	println("Optimal motors:")
+	for (mtr, ratio) in optimalMotors
+		println("\t", mtr, ", ratio=", 1 / ratio)
+	end
 end
 
 if termination_status(model) == MOI.OPTIMAL
