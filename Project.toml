@@ -1,6 +1,5 @@
 name = "VitaminOptimizer"
 uuid = "17385e80-a1d1-11e9-2b62-b5aee146aa18"
-authors = ["Ryan Benasutti <firey45@gmail.com>"]
 version = "0.1.0"
 
 [deps]
