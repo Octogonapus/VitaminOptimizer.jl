@@ -41,6 +41,13 @@ omegaFuncRow = [0 0 0 0 1]
 @constraint(model, slot3Unique, sum(slot3) == 1)
 
 allSlots = [slot1, slot2, slot3]
+numSlots = length(allSlots)
+
+slotτ(i) = τRow * F_m * allSlots[i]
+slotω(i) = ωRow * F_m * allSlots[i]
+slotPrice(i) = priceRow * F_m * allSlots[i]
+slotMass(i) = massRow * F_m * allSlots[i]
+slotOmegaFunc(i) = omegaFuncRow * F_m * allSlots[i]
 
 """
 	@ω(τ::Array{GenericAffExpr{Float64,VariableRef},1}, i::Int64)
@@ -48,8 +55,7 @@ allSlots = [slot1, slot2, slot3]
 Calculate the rotational speed given the applied torque `τ` for the motor in
 slot `i`.
 """
-ω(τ::Array{GenericAffExpr{Float64,VariableRef},1}, i::Int64) =
-	((τRow * F_m * allSlots[i]) - τ) * (omegaFuncRow * F_m * allSlots[i])
+ω(τ::Array{GenericAffExpr{Float64,VariableRef},1}, i) = (slotτ(i) - τ) * slotOmegaFunc(i)
 
 """
 	@ω(τ::Float64, i::Int64)
@@ -57,40 +63,39 @@ slot `i`.
 Calculate the rotational speed given the applied torque `τ` for the motor in
 slot `i`.
 """
-ω(τ::Float64, i::Int64) =
-	((τRow * F_m * allSlots[i]) .- τ) * (omegaFuncRow * F_m * allSlots[i])
+ω(τ::Float64, i) = (slotτ(i) .- τ) * slotOmegaFunc(i)
 
 # Equation 3
 # limbConfig[1].dhParam.alpha is 0 which makes this boring
 @expression(model, τ1Required, limb.tipForce * (limbConfig[1].dhParam.alpha + limbConfig[2].dhParam.alpha +
  							   		limbConfig[3].dhParam.alpha) +
-							   gravity * (massRow * F_m * slot2 * limbConfig[1].dhParam.alpha +
-							   massRow * F_m * slot3 * (limbConfig[1].dhParam.alpha + limbConfig[2].dhParam.alpha)))
-@constraint(model, eq3, τRow * F_m * slot1 .>= τ1Required)
+							   gravity * (slotMass(2) * limbConfig[1].dhParam.alpha +
+							   slotMass(3) * (limbConfig[1].dhParam.alpha + limbConfig[2].dhParam.alpha)))
+@constraint(model, eq3, slotτ(1) .>= τ1Required)
 
 # Equation 4
 @expression(model, τ2Required, limb.tipForce * (limbConfig[2].dhParam.alpha + limbConfig[3].dhParam.alpha) +
-							   massRow * F_m * slot3 * gravity * limbConfig[2].dhParam.alpha)
-@constraint(model, eq4, τRow * F_m * slot2 .>= τ2Required)
+							   slotMass(3) * gravity * limbConfig[2].dhParam.alpha)
+@constraint(model, eq4, slotτ(2) .>= τ2Required)
 
 # Equation 5
 @expression(model, τ3Required, limb.tipForce * limbConfig[3].dhParam.alpha)
-@constraint(model, eq5, τRow * F_m * slot3 .>= τ3Required)
+@constraint(model, eq5, slotτ(3) .>= τ3Required)
 
 # Equation 6
 @expression(model, ω1Required, limb.tipVelocity / (limbConfig[1].dhParam.alpha + limbConfig[2].dhParam.alpha +
  									limbConfig[3].dhParam.alpha))
-@constraint(model, eq6, ωRow * F_m * slot1 .>= ω1Required)
+@constraint(model, eq6, slotω(1) .>= ω1Required)
 
 # Equation 7
 @expression(model, ω2Required, limb.tipVelocity / (limbConfig[2].dhParam.alpha + limbConfig[3].dhParam.alpha))
-@constraint(model, eq7, ωRow * F_m * slot2 .>= ω2Required)
+@constraint(model, eq7, slotω(2) .>= ω2Required)
 
 # Equation 8
 @expression(model, ω3Required, limb.tipVelocity / limbConfig[3].dhParam.alpha)
-@constraint(model, eq8, ωRow * F_m * slot3 .>= ω3Required)
+@constraint(model, eq8, slotω(3) .>= ω3Required)
 
-@objective(model, Min, sum(x -> priceRow * F_m * x, allSlots)[1])
+@objective(model, Min, sum(x -> slotPrice(x), collect(1:numSlots))[1])
 
 optimize!(model)
 
