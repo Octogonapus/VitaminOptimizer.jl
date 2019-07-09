@@ -11,7 +11,7 @@ limbConfig = limbConstraints["min"]
 
 motors = parseMotorOptions!("res/motorOptions.json")
 gearRatios = [7, 5, 3, 1, 1/3, 1/5, 1/7]
-F_m = constructFeatureMatrix(motors, gearRatios)
+F_m = constructMotorFeatureMatrix(motors, gearRatios)
 
 # j = JSON.parsefile("res/constraints1.json")
 # tipVelocity = j["requiredTipVelocityMeterPerSec"]

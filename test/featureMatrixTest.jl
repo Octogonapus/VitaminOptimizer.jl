@@ -7,9 +7,9 @@ function featureMatrixToSet(fm)
     return Set([Set(fm[:,n]) for n=1:size(fm)[2]])
 end
 
-@testset "constructFeatureMatrix" begin
+@testset "constructMotorFeatureMatrix" begin
     @test featureMatrixToSet(
-        constructFeatureMatrix(
+        constructMotorFeatureMatrix(
             parseMotorOptions!("res/testMotorOptions.json"),
             [2 1 1/3])
         ) == featureMatrixToSet(hcat(

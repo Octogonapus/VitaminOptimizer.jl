@@ -1,4 +1,4 @@
-function constructFeatureMatrix(motors, gearRatios)
+function constructMotorFeatureMatrix(motors, gearRatios)
     return hcat([
         [motor.τStall / ratio
      	 motor.ωFree * ratio
