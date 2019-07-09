@@ -110,33 +110,23 @@ function buildAndOptimizeModel!(model, limb, limbConfig, motors, gearRatios)
 		return optimalMotors
 	end
 
-
-	function printOptimizationResult!(optimalMotors)
-		println("Optimal objective: ", objective_value(model))
-		println("Optimal motors:")
-		for (mtr, ratio) in optimalMotors
-			println("\t", mtr, ", ratio=", ratio)
-		end
-	end
-
 	if !(termination_status(model) == MOI.OPTIMAL || (termination_status(model) == MOI.TIME_LIMIT && has_values(model)))
 		error("The model was not solved correctly.")
 	else
-		optimalMotors = findOptimalMotors()
-
-		if termination_status(model) == MOI.TIME_LIMIT
-			println("-------------------------------------------------------")
-			println("-------------------SUBOPTIMAL RESULT-------------------")
-			println("-------------------------------------------------------")
-		end
-
-		printOptimizationResult!(optimalMotors)
-		return (model, optimalMotors)
+		return (model, findOptimalMotors())
 	end
 end
 
 function makeGLPKModel()::Model
 	return Model(with_optimizer(GLPK.Optimizer))
+end
+
+function printOptimizationResult!(model, optimalMotors)
+	println("Optimal objective: ", objective_value(model))
+	println("Optimal motors:")
+	for (mtr, ratio) in optimalMotors
+		println("\t", mtr, ", ratio=", ratio)
+	end
 end
 
 """
@@ -159,8 +149,7 @@ Optimal motors:
 function loadAndOptimize!(model::Model,
 		constraintsFile::String,
 		limbName::String,
-		motorOptionsFile::String
-	)
+		motorOptionsFile::String)
 	limb = parseConstraints!(constraintsFile, [limbName])[1]
 	limbConfig = limb.minLinks
 
@@ -169,6 +158,15 @@ function loadAndOptimize!(model::Model,
 	gearRatios = Set(hcat(ratios, 1 ./ ratios))
 
 	(model, optimalMotors) = buildAndOptimizeModel!(model, limb, limbConfig, motors, gearRatios)
+
+	if termination_status(model) == MOI.TIME_LIMIT
+		println("-------------------------------------------------------")
+		println("-------------------SUBOPTIMAL RESULT-------------------")
+		println("-------------------------------------------------------")
+	end
+
+	printOptimizationResult!(model, optimalMotors)
+
 	return optimalMotors
 end
 
