@@ -1,32 +1,58 @@
 using Test, VitaminOptimizer
 
 @testset "loadAndOptimize!" begin
-    solutions = loadAndOptimize!(
+    paretoSolutions = loadAndOptimize!(
         makeGLPKModel(),
         "testConstraints1.json",
         "HephaestusArmLimbOne",
         "testMotorOptions.json"
     )
 
-    for i in 1:size(solutions)[1]
-        solution = solutions[i,:]
+    for i in 1:size(paretoSolutions)[1]
+        solution = paretoSolutions[i,:]
         println("Solution:")
         for mtr in solution
             println("\t", mtr)
         end
     end
 
-    @test size(solutions) == (20,3)
+    @test size(paretoSolutions) == (20,3)
 
-    @test length(collect(Set([vec(solutions[i,:]) for i in 1:size(solutions)[1]]))) == 20
+    @test length(collect(Set([vec(paretoSolutions[i,:]) for i in 1:size(paretoSolutions)[1]]))) == 20
 
     @test isequal(
         # Take the first solution. Don't test for gear ratio because it can vary.
-        [mtr[1] for mtr in solutions[1,:]],
+        [x[1] for x in paretoSolutions[1,:]],
         [
-            VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12)
-            VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12)
+            VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12),
+            VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12),
             VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12)
         ]
     )
+
+    @testset "loadAndOptimzeAtParetoFrontier!" begin
+        fullyOptimalSolution = loadAndOptimzeAtParetoFrontier!(
+            makeGLPKModel(),
+            "testConstraints1.json",
+            "HephaestusArmLimbOne",
+            "testMotorOptions.json"
+        )
+
+        # Check the motors in the solution on the Pareto frontier
+        @test isequal(
+            vcat([x[1] for x in fullyOptimalSolution]...),
+            [
+                VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12),
+                VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12),
+                VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12)
+            ]
+        )
+
+        # Check the sum of the gear ratios in the fully optimal solution is equal to
+        # the maximum of the sum of gear ratios in all solutions on the Paret frontier
+        @test isequal(
+            sum([x[2] for x in fullyOptimalSolution]),
+            maximum([sum(x[2] for x in paretoSolutions[i,:]) for i in 1:size(paretoSolutions)[1]])
+        )
+    end
 end
