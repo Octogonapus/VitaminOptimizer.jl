@@ -1,6 +1,6 @@
 name = "VitaminOptimizer"
 uuid = "17385e80-a1d1-11e9-2b62-b5aee146aa18"
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 GLPK = "60bf3e95-4087-53dc-ae20-288a0d20c6a6"
