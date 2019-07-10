@@ -9,6 +9,84 @@ include("featureMatrix.jl")
 
 const gravity = 9.80665
 
+"""
+	optimalIndices(slots)
+
+Find the indices of the chosen values of `slots` (the indices where `slots[i] == 1`).
+"""
+optimalIndices(slots) = [findfirst(isequal(1), value.(slot)) for slot in slots]
+
+"""
+	optimalColumns(featureMatrix, slots)
+
+Get the columns of the `featureMatrix` corresponding to the chosen values for the `slots`.
+"""
+optimalColumns(featureMatrix, slots) = [featureMatrix[:, i] for i in optimalIndices(slots)]
+
+"""
+	findMotorIndex(featureMatrixColumn, motors)
+
+Find the index of the motor in the `motors` array by searching for a motor with τStall, ωFree, price,
+and mass equal to those in the `featureMatrixColumn` (after un-applying the gear ratio).
+"""
+findMotorIndex(featureMatrixColumn, motors) = findfirst(
+	# Approximate equality on τStall and ωFree because we are un-applying the gear ratio.
+	x::Motor -> x.τStall ≈ featureMatrixColumn[1] * featureMatrixColumn[6] &&
+		x.ωFree ≈ featureMatrixColumn[2] / featureMatrixColumn[6] &&
+		x.price == featureMatrixColumn[3] &&
+		x.mass == featureMatrixColumn[4],
+	motors)
+
+"""
+	findOptimalMotors(featureMatrix, allSlots, motors)
+
+Find the optimal motors after the most recent optimization.
+"""
+findOptimalMotors(featureMatrix, allSlots, motors) = reshape(
+	[(motors[findMotorIndex(col, motors)], col[6]) for col in optimalColumns(featureMatrix, allSlots)],
+	1, length(allSlots))
+
+"""
+	findAllSolutions(model, optimalObjectiveValue, featureMatrix, allSlots, motors)
+
+Iteratively optimize the `model` to find all solutions at a given `optimalObjectiveValue` by adding a
+constraint to disallow the most recent combination of slot values. Returns an array of all solutions.
+"""
+function findAllSolutions(model, optimalObjectiveValue, featureMatrix, allSlots, motors)
+	# Disallow the current solution by disallowing the combination of the current slot1, slot2, and slot3
+	# values.
+	@constraint(model, sum(x -> x[1][x[2]], zip(allSlots, optimalIndices(allSlots))) <= length(allSlots) - 1)
+
+	# Optimize again to find a different solution.
+	optimize!(model)
+
+	# If we are no longer at the given optimum or if the model failed to opimize, stop.
+	if objective_value(model) != optimalObjectiveValue || failedToOptimize(model)
+		return []
+	else
+		# Record the current solution.
+		solution = findOptimalMotors(featureMatrix, allSlots, motors)
+
+		# Keep finding more solutions.
+		otherSolutions = findAllSolutions(model, optimalObjectiveValue, featureMatrix, allSlots, motors)
+
+		# Add the current solution to the end of the other solutions.
+		if otherSolutions == []
+			return solution
+		else
+			return vcat(solution, otherSolutions)
+		end
+	end
+end
+
+"""
+	failedToOptimize(model)
+
+Check if the `model` failed to optimize.
+"""
+failedToOptimize(model) = !(termination_status(model) == MOI.OPTIMAL ||
+	(termination_status(model) == MOI.TIME_LIMIT && has_values(model)))
+
 function buildAndOptimizeModel!(model, limb, limbConfig, motors, gearRatios)
 	F_m = constructMotorFeatureMatrix(motors, gearRatios)
 	(numRows, numCols) = size(F_m)
@@ -92,28 +170,16 @@ function buildAndOptimizeModel!(model, limb, limbConfig, motors, gearRatios)
 
 	@objective(model, Min, sum(x -> slotPrice(x), collect(1:numSlots)))
 
+	# Run the first optimization pass.
 	optimize!(model)
 
-	function findMotorIndex(featureMatrixColumn)
-		return findfirst(
-			x::Motor -> x.τStall ≈ featureMatrixColumn[1] * featureMatrixColumn[6] &&
-				x.ωFree ≈ featureMatrixColumn[2] / featureMatrixColumn[6] &&
-				x.price == featureMatrixColumn[3] &&
-				x.mass == featureMatrixColumn[4],
-			motors)
-	end
-
-	function findOptimalMotors()
-		optimalMotorIndices = [findfirst(isequal(1), value.(slot)) for slot in allSlots]
-		optimalMotorColumns = [F_m[:, i] for i in optimalMotorIndices]
-		optimalMotors = [(motors[findMotorIndex(col)], col[6]) for col in optimalMotorColumns]
-		return optimalMotors
-	end
-
-	if !(termination_status(model) == MOI.OPTIMAL || (termination_status(model) == MOI.TIME_LIMIT && has_values(model)))
+	if failedToOptimize(model)
 		error("The model was not solved correctly.")
 	else
-		return (model, findOptimalMotors())
+		# Get the first solution and use it to find the other solutions.
+		solution = findOptimalMotors(F_m, allSlots, motors)
+		otherSolutions = findAllSolutions(model, objective_value(model), F_m, allSlots, motors)
+		return (model, vcat(solution, otherSolutions))
 	end
 end
 
@@ -154,10 +220,12 @@ function loadAndOptimize!(model::Model,
 	limbConfig = limb.minLinks
 
 	motors = parseMotorOptions!(motorOptionsFile)
+
+	# TODO: Put available gear ratios in the constraints file
 	ratios = collect(range(1, step=2, length=30))
 	gearRatios = Set(hcat(ratios, 1 ./ ratios))
 
-	(model, optimalMotors) = buildAndOptimizeModel!(model, limb, limbConfig, motors, gearRatios)
+	(model, allSolutions) = buildAndOptimizeModel!(model, limb, limbConfig, motors, gearRatios)
 
 	if termination_status(model) == MOI.TIME_LIMIT
 		println("-------------------------------------------------------")
@@ -165,9 +233,7 @@ function loadAndOptimize!(model::Model,
 		println("-------------------------------------------------------")
 	end
 
-	printOptimizationResult!(model, optimalMotors)
-
-	return optimalMotors
+	return allSolutions
 end
 
 export loadAndOptimize!
