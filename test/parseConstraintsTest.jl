@@ -4,7 +4,7 @@ include("../src/parseConstraints.jl")
 
 @testset "parseConstraints" begin
         @test isequal(
-                parseConstraints!("res/testConstraints1.json", ["HephaestusArmLimbOne"]),
+                parseConstraints!("testConstraints1.json", ["HephaestusArmLimbOne"]),
                 [Limb(
                         "HephaestusArmLimbOne",
                         tuple([Link(DhParam(0.135, 0, 0, -90)),
@@ -19,7 +19,7 @@ include("../src/parseConstraints.jl")
         )
 
         @test isequal(
-                parseConstraints!("res/testConstraints2.json", ["HephaestusArmLimbOne"]),
+                parseConstraints!("testConstraints2.json", ["HephaestusArmLimbOne"]),
                 [Limb(
                         "HephaestusArmLimbOne",
                         tuple([Link(DhParam(0.135, 0, 0.1, -90)),

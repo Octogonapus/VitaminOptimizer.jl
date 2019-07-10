@@ -10,7 +10,7 @@ end
 @testset "constructMotorFeatureMatrix" begin
     @test featureMatrixToSet(
         constructMotorFeatureMatrix(
-            parseMotorOptions!("res/testMotorOptions.json"),
+            parseMotorOptions!("testMotorOptions.json"),
             [2 1 1/3])
         ) == featureMatrixToSet(hcat(
             [0.098 / 2

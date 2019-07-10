@@ -3,9 +3,9 @@ using Test, VitaminOptimizer
 @testset "loadAndOptimize!" begin
     solutions = loadAndOptimize!(
         makeGLPKModel(),
-        "res/testConstraints1.json",
+        "testConstraints1.json",
         "HephaestusArmLimbOne",
-        "res/testMotorOptions.json"
+        "testMotorOptions.json"
     )
 
     for i in 1:size(solutions)[1]
