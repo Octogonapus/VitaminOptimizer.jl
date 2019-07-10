@@ -153,22 +153,6 @@ function buildAndOptimizeModel!(model, limb, limbConfig, motors, gearRatios)
 	gearRatioRow = transpose(featureIdentity[6,:])
 	slotGearRatioFunc(i) = gearRatioRow * F_m * allSlots[i]
 
-	"""
-		@ω(τ::Array{GenericAffExpr{Float64,VariableRef},1}, i)
-
-	Calculate the rotational speed given the applied torque `τ` for the motor in
-	slot `i`.
-	"""
-	ω(τ::Array{GenericAffExpr{Float64,VariableRef},1}, i) = (slotτ(i) - τ) * slotOmegaFunc(i)
-
-	"""
-		@ω(τ::Float64, i)
-
-	Calculate the rotational speed given the applied torque `τ` for the motor in
-	slot `i`.
-	"""
-	ω(τ::Float64, i) = (slotτ(i) .- τ) * slotOmegaFunc(i)
-
 	# Equation 3
 	@expression(model, τ1Required, limb.tipForce * (limbConfig[1].dhParam.r + limbConfig[2].dhParam.r +
 	 							   		limbConfig[3].dhParam.r) +
@@ -272,6 +256,7 @@ function loadAndOptimize!(model::Model, constraintsFile::String, limbName::Strin
 	model, objectiveFunction, solution, featureMatrix, allSlots = buildAndOptimizeModel!(model, limb, limbConfig, motors, gearRatios)
 	otherSolutions = exploreParetoFrontier(model, objective_value(model), featureMatrix, allSlots, motors)
 
+	printOptimizationResult!(model, solution)
 	return vcat(solution, otherSolutions)
 end
 
@@ -299,7 +284,10 @@ function loadAndOptimzeAtParetoFrontier!(model::Model, constraintsFile::String, 
 	limbConfig = limb.minLinks
 
 	model, objectiveFunction, solution, featureMatrix, allSlots = buildAndOptimizeModel!(model, limb, limbConfig, motors, gearRatios)
-	return optimizeAtParetoFrontier(model, objective_value(model), objectiveFunction, featureMatrix, allSlots, motors)
+	solution =  optimizeAtParetoFrontier(model, objective_value(model), objectiveFunction, featureMatrix, allSlots, motors)
+
+	printOptimizationResult!(model, solution)
+	return solution
 end
 
 export loadAndOptimize!
