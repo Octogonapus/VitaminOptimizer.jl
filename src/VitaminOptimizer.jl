@@ -47,12 +47,12 @@ findOptimalMotors(featureMatrix, allSlots, motors) = reshape(
 	1, length(allSlots))
 
 """
-	findAllSolutions(model, optimalObjectiveValue, featureMatrix, allSlots, motors)
+	exploreParetoFrontier(model, optimalObjectiveValue, featureMatrix, allSlots, motors)
 
 Iteratively optimize the `model` to find all solutions at a given `optimalObjectiveValue` by adding a
 constraint to disallow the most recent combination of slot values. Returns an array of all solutions.
 """
-function findAllSolutions(model, optimalObjectiveValue, featureMatrix, allSlots, motors)
+function exploreParetoFrontier(model, optimalObjectiveValue, featureMatrix, allSlots, motors)
 	# Disallow the current solution by disallowing the combination of the current slot1, slot2, and slot3
 	# values.
 	@constraint(model, sum(x -> x[1][x[2]], zip(allSlots, optimalIndices(allSlots))) <= length(allSlots) - 1)
@@ -68,7 +68,7 @@ function findAllSolutions(model, optimalObjectiveValue, featureMatrix, allSlots,
 		solution = findOptimalMotors(featureMatrix, allSlots, motors)
 
 		# Keep finding more solutions.
-		otherSolutions = findAllSolutions(model, optimalObjectiveValue, featureMatrix, allSlots, motors)
+		otherSolutions = exploreParetoFrontier(model, optimalObjectiveValue, featureMatrix, allSlots, motors)
 
 		# Add the current solution to the end of the other solutions.
 		if otherSolutions == []
@@ -178,7 +178,7 @@ function buildAndOptimizeModel!(model, limb, limbConfig, motors, gearRatios)
 	else
 		# Get the first solution and use it to find the other solutions.
 		solution = findOptimalMotors(F_m, allSlots, motors)
-		otherSolutions = findAllSolutions(model, objective_value(model), F_m, allSlots, motors)
+		otherSolutions = exploreParetoFrontier(model, objective_value(model), F_m, allSlots, motors)
 		return (model, vcat(solution, otherSolutions))
 	end
 end
