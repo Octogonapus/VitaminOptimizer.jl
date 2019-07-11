@@ -24,12 +24,12 @@ function buildRowArray(matrix, row)::Array{Int64,2}
 end
 
 """
-    addSlotFunc(matrix, slotFuncName, row)
+    slotFunc(matrix, row, slotFuncName)
 
 Add a function named `slotFuncName` to access a property of a slot from row
 `row` in feature matrix `matrix`.
 """
-macro addSlotFunc(matrix, slotFuncName, row)
+macro slotFunc(matrix, row, slotFuncName)
     quote
         local mat = $(esc(matrix)).matrix
         local slots = $(esc(matrix)).slots

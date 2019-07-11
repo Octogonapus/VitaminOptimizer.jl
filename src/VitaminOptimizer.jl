@@ -112,6 +112,11 @@ Check if the `model` failed to optimize.
 failedToOptimize(model) = !(termination_status(model) == MOI.OPTIMAL ||
 	(termination_status(model) == MOI.TIME_LIMIT && has_values(model)))
 
+"""
+	onlyOneSelection(model, slot)
+
+Constrain the `model` to select only one variable from `slot`.
+"""
 onlyOneSelection(model, slot) = @constraint(model, sum(slot) == 1)
 
 """
@@ -126,22 +131,22 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 
 	# Each slot is a binary vector with a 1 that picks which motor to use.
 	numFmCols = length(motors) * length(gearRatios)
-	@variable(model, slot1[1:numFmCols], Bin)
-	@variable(model, slot2[1:numFmCols], Bin)
-	@variable(model, slot3[1:numFmCols], Bin)
+	@variable(model, motorSlot1[1:numFmCols], Bin)
+	@variable(model, motorSlot2[1:numFmCols], Bin)
+	@variable(model, motorSlot3[1:numFmCols], Bin)
 
-	motorSlots = [slot1, slot2, slot3]
+	motorSlots = [motorSlot1, motorSlot2, motorSlot3]
 	for slot in motorSlots
 		onlyOneSelection(model, slot)
 	end
 
     Fm = FeatureMatrix(constructMotorFeatureMatrix(motors, gearRatios), motorSlots)
-	@addSlotFunc(Fm, slotτ, 1)
-	@addSlotFunc(Fm, slotω, 2)
-	@addSlotFunc(Fm, slotPrice, 3)
-	@addSlotFunc(Fm, slotMass, 4)
-	@addSlotFunc(Fm, slotOmegaFunc, 5)
-	@addSlotFunc(Fm, slotGearRatio, 6)
+	@slotFunc(Fm, 1, motorSlotτ)
+	@slotFunc(Fm, 2, motorSlotω)
+	@slotFunc(Fm, 3, motorSlotPrice)
+	@slotFunc(Fm, 4, motorSlotMass)
+	@slotFunc(Fm, 5, motorSlotOmegaFunc)
+	@slotFunc(Fm, 6, motorSlotGearRatio)
 
 	# link1Row = transpose(featureIdentity[7,:])
 	# slotLink1(i) = link1Row * F_m * allSlots[i]
@@ -161,8 +166,8 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 	# Equation 3
 	@expression(model, τ1Required, limb.tipForce * (limbConfig[1].dhParam.r + limbConfig[2].dhParam.r +
 	 							   		limbConfig[3].dhParam.r) +
-								   gravity * (slotMass(2) * limbConfig[1].dhParam.r +
-								   slotMass(3) * (limbConfig[1].dhParam.r + limbConfig[2].dhParam.r)))
+								   gravity * (motorSlotMass(2) * limbConfig[1].dhParam.r +
+								   motorSlotMass(3) * (limbConfig[1].dhParam.r + limbConfig[2].dhParam.r)))
 
     # # TODO: I think I need a separate link feature matrix
    	# @expression(model, τ1Required, limb.tipForce * (slotLink1(1) + limbConfig[2].dhParam.r +
@@ -170,31 +175,31 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
    	# 							   gravity * (slotMass(2) * limbConfig[1].dhParam.r +
    	# 							   slotMass(3) * (limbConfig[1].dhParam.r + limbConfig[2].dhParam.r)))
 
-	@constraint(model, eq3, slotτ(1) .>= τ1Required)
+	@constraint(model, eq3, motorSlotτ(1) .>= τ1Required)
 
 	# Equation 4
 	@expression(model, τ2Required, limb.tipForce * (limbConfig[2].dhParam.r + limbConfig[3].dhParam.r) +
-								   slotMass(3) * gravity * limbConfig[2].dhParam.r)
-	@constraint(model, eq4, slotτ(2) .>= τ2Required)
+								   motorSlotMass(3) * gravity * limbConfig[2].dhParam.r)
+	@constraint(model, eq4, motorSlotτ(2) .>= τ2Required)
 
 	# Equation 5
 	@expression(model, τ3Required, limb.tipForce * limbConfig[3].dhParam.r)
-	@constraint(model, eq5, slotτ(3) .>= τ3Required)
+	@constraint(model, eq5, motorSlotτ(3) .>= τ3Required)
 
 	# Equation 6
 	@expression(model, ω1Required, limb.tipVelocity / (limbConfig[1].dhParam.r + limbConfig[2].dhParam.r +
 	 									limbConfig[3].dhParam.r))
-	@constraint(model, eq6, slotω(1) .>= ω1Required)
+	@constraint(model, eq6, motorSlotω(1) .>= ω1Required)
 
 	# Equation 7
 	@expression(model, ω2Required, limb.tipVelocity / (limbConfig[2].dhParam.r + limbConfig[3].dhParam.r))
-	@constraint(model, eq7, slotω(2) .>= ω2Required)
+	@constraint(model, eq7, motorSlotω(2) .>= ω2Required)
 
 	# Equation 8
 	@expression(model, ω3Required, limb.tipVelocity / limbConfig[3].dhParam.r)
-	@constraint(model, eq8, slotω(3) .>= ω3Required)
+	@constraint(model, eq8, motorSlotω(3) .>= ω3Required)
 
-	objectiveFunction = sum(i -> slotPrice(i), 1:length(motorSlots))
+	objectiveFunction = sum(i -> motorSlotPrice(i), 1:length(motorSlots))
 	@objective(model, Min, objectiveFunction)
 
 	# Run the first optimization pass.
@@ -315,11 +320,11 @@ export loadAndOptimzeAtParetoFrontier!
 export makeGLPKModel
 export printOptimizationResult!
 
-loadAndOptimize!(
-	makeGLPKModel(),
-	"res/constraints1.json",
-	"HephaestusArmLimbOne",
-	"res/motorOptions.json"
-)
+# loadAndOptimize!(
+# 	makeGLPKModel(),
+# 	"res/constraints1.json",
+# 	"HephaestusArmLimbOne",
+# 	"res/motorOptions.json"
+# )
 
 end # module VitaminOptimizer
