@@ -112,6 +112,8 @@ Check if the `model` failed to optimize.
 failedToOptimize(model) = !(termination_status(model) == MOI.OPTIMAL ||
 	(termination_status(model) == MOI.TIME_LIMIT && has_values(model)))
 
+onlyOneSelection(model, slot) = @constraint(model, sum(slot) == 1)
+
 """
 	buildAndOptimizeModel!(model, limb, motors, gearRatios)
 
@@ -121,28 +123,25 @@ model to minimize price using the optimizer in the `model`.
 """
 function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 	limbConfig = limb.minLinks
-	F_m = constructMotorFeatureMatrix(motors, gearRatios)
-	numRows, numCols = size(F_m)
 
 	# Each slot is a binary vector with a 1 that picks which motor to use.
-	@variable(model, slot1[1:numCols], Bin)
-	@constraint(model, slot1Unique, sum(slot1) == 1)
+	numFmCols = length(motors) * length(gearRatios)
+	@variable(model, slot1[1:numFmCols], Bin)
+	@variable(model, slot2[1:numFmCols], Bin)
+	@variable(model, slot3[1:numFmCols], Bin)
 
-	@variable(model, slot2[1:numCols], Bin)
-	@constraint(model, slot2Unique, sum(slot2) == 1)
+	motorSlots = [slot1, slot2, slot3]
+	for slot in motorSlots
+		onlyOneSelection(model, slot)
+	end
 
-	@variable(model, slot3[1:numCols], Bin)
-	@constraint(model, slot3Unique, sum(slot3) == 1)
-
-	allSlots = [slot1, slot2, slot3]
-
-    fm = FeatureMatrix(F_m, allSlots)
-	@addSlotFunc(fm, slotτ, 1)
-	@addSlotFunc(fm, slotω, 2)
-	@addSlotFunc(fm, slotPrice, 3)
-	@addSlotFunc(fm, slotMass, 4)
-	@addSlotFunc(fm, slotOmegaFunc, 5)
-	@addSlotFunc(fm, slotGearRatio, 6)
+    Fm = FeatureMatrix(constructMotorFeatureMatrix(motors, gearRatios), motorSlots)
+	@addSlotFunc(Fm, slotτ, 1)
+	@addSlotFunc(Fm, slotω, 2)
+	@addSlotFunc(Fm, slotPrice, 3)
+	@addSlotFunc(Fm, slotMass, 4)
+	@addSlotFunc(Fm, slotOmegaFunc, 5)
+	@addSlotFunc(Fm, slotGearRatio, 6)
 
 	# link1Row = transpose(featureIdentity[7,:])
 	# slotLink1(i) = link1Row * F_m * allSlots[i]
@@ -195,7 +194,7 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 	@expression(model, ω3Required, limb.tipVelocity / limbConfig[3].dhParam.r)
 	@constraint(model, eq8, slotω(3) .>= ω3Required)
 
-	objectiveFunction = sum(i -> slotPrice(i), 1:length(allSlots))
+	objectiveFunction = sum(i -> slotPrice(i), 1:length(motorSlots))
 	@objective(model, Min, objectiveFunction)
 
 	# Run the first optimization pass.
@@ -205,12 +204,12 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 		error("The model was not solved correctly.")
 	else
 		# Get the first solution and use it to find the other solutions.
-		solution = findOptimalMotors(F_m, allSlots, motors)
+		solution = findOptimalMotors(Fm.matrix, motorSlots, motors)
 
 		println("Found solution:")
 		printOptimizationResult!(model, solution)
 
-		return (model, objectiveFunction, solution, F_m, allSlots)
+		return (model, objectiveFunction, solution, Fm.matrix, motorSlots)
 	end
 end
 
@@ -316,11 +315,11 @@ export loadAndOptimzeAtParetoFrontier!
 export makeGLPKModel
 export printOptimizationResult!
 
-# loadAndOptimize!(
-# 	makeGLPKModel(),
-# 	"res/constraints1.json",
-# 	"HephaestusArmLimbOne",
-# 	"res/motorOptions.json"
-# )
+loadAndOptimize!(
+	makeGLPKModel(),
+	"res/constraints1.json",
+	"HephaestusArmLimbOne",
+	"res/motorOptions.json"
+)
 
 end # module VitaminOptimizer
