@@ -8,14 +8,6 @@ using Test, VitaminOptimizer
         "testMotorOptions.json"
     )
 
-    for i in 1:size(paretoSolutions)[1]
-        solution = paretoSolutions[i,:]
-        println("Solution:")
-        for mtr in solution
-            println("\t", mtr)
-        end
-    end
-
     @test size(paretoSolutions) == (20,3)
 
     @test length(collect(Set([vec(paretoSolutions[i,:]) for i in 1:size(paretoSolutions)[1]]))) == 20

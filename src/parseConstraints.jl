@@ -1,9 +1,9 @@
 import JSON
 
 struct DhParam
-    d::Float64     # Units m
+    d::Float64 # Units m
     θ::Float64 # Units deg
-    r::Float64     # Units m
+    r::Float64 # Units m
     α::Float64 # Units deg
 end
 

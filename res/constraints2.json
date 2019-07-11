@@ -15,14 +15,14 @@
     "elbow": {
     	"index":2,
       "dh-D": 0.0,
-      "dh-A": 169.28,
+      "dh-A": 100.0,
       "dh-Alpha": 0.0,
       "dh-Theta": 90.0
     },
     "baseTilt": {
     	"index":1,
       "dh-D": 0.0,
-      "dh-A": 175.0,
+      "dh-A": 150.0,
       "dh-Alpha": 0.0,
       "dh-Theta": 0.0
     }
