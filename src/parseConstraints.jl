@@ -46,7 +46,10 @@ function parseLimb(json::Dict{String, Any}, limbName::String)
     tipVelocity = json["requiredTipVelocityMeterPerSec"]
     tipForce = json["requiredTipForceNewtons"]
     limb = json[limbName]
+
     (maxConfig, minConfig) = parseLimbConfig(limb)
+    @assert length(maxConfig) == length(minConfig)
+
     return Limb(
         limbName,
         maxConfig,

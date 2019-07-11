@@ -50,23 +50,3 @@ function constructMotorFeatureMatrix(motors, gearRatios)
         ratio in gearRatios
    ]...)
 end
-
-# function constructMotorFeatureMatrix(motors, gearRatios, limb::Limb, linkRangeLength::Int64)
-#     return hcat([
-#     [motor.τStall / ratio
-#     motor.ωFree * ratio
-#     motor.price
-#     motor.mass
-#     (motor.ωFree * ratio) / (motor.τStall / ratio)
-#     ratio
-#     link1
-#     link2
-#     link3
-#     motor.mass * link1
-#     motor.mass * link2] for motor in motors,
-#         ratio in gearRatios,
-#         link1 in range(limb.minLinks[1].dhParam.r, stop = limb.maxLinks[1].dhParam.r, length = linkRangeLength),
-#         link2 in range(limb.minLinks[2].dhParam.r, stop = limb.maxLinks[2].dhParam.r, length = linkRangeLength),
-#         link3 in range(limb.minLinks[3].dhParam.r, stop = limb.maxLinks[3].dhParam.r, length = linkRangeLength)
-#    ]...)
-# end

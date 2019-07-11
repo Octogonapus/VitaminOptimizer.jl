@@ -129,7 +129,7 @@ model to minimize price using the optimizer in the `model`.
 function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 	limbConfig = limb.minLinks
 
-	# Each slot is a binary vector with a 1 that picks which motor to use.
+	# Motor feature matrix.
 	numFmCols = length(motors) * length(gearRatios)
 	@variable(model, motorSlot1[1:numFmCols], Bin)
 	@variable(model, motorSlot2[1:numFmCols], Bin)
@@ -148,32 +148,11 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 	@slotFunc(Fm, 5, motorSlotOmegaFunc)
 	@slotFunc(Fm, 6, motorSlotGearRatio)
 
-	# link1Row = transpose(featureIdentity[7,:])
-	# slotLink1(i) = link1Row * F_m * allSlots[i]
-	#
-	# link2Row = transpose(featureIdentity[8,:])
-	# slotLink2(i) = link2Row * F_m * allSlots[i]
-	#
-	# link3Row = transpose(featureIdentity[9,:])
-	# slotLink3(i) = link3Row * F_m * allSlots[i]
-	#
-	# massTimesLink1Row = transpose(featureIdentity[10,:])
-	# slotMassTimesLink1(i) = massTimesLink1Row * F_m * allSlots[i]
-	#
-	# massTimesLink2Row = transpose(featureIdentity[11,:])
-	# slotMassTimesLink2(i) = massTimesLink2Row * F_m * allSlots[i]
-
 	# Equation 3
 	@expression(model, τ1Required, limb.tipForce * (limbConfig[1].dhParam.r + limbConfig[2].dhParam.r +
 	 							   		limbConfig[3].dhParam.r) +
 								   gravity * (motorSlotMass(2) * limbConfig[1].dhParam.r +
 								   motorSlotMass(3) * (limbConfig[1].dhParam.r + limbConfig[2].dhParam.r)))
-
-    # # TODO: I think I need a separate link feature matrix
-   	# @expression(model, τ1Required, limb.tipForce * (slotLink1(1) + limbConfig[2].dhParam.r +
-   	#  							   		limbConfig[3].dhParam.r) +
-   	# 							   gravity * (slotMass(2) * limbConfig[1].dhParam.r +
-   	# 							   slotMass(3) * (limbConfig[1].dhParam.r + limbConfig[2].dhParam.r)))
 
 	@constraint(model, eq3, motorSlotτ(1) .>= τ1Required)
 
