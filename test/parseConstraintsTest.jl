@@ -26,10 +26,10 @@ include("../src/parseConstraints.jl")
                                 Link(DhParam(0, 0, 0.2, 0)),
                                 Link(DhParam(0, 90, 0.2, 0))]...),
                         tuple([Link(DhParam(0.135, 0, 0, -90)),
-                                Link(DhParam(0, 0, 0.175, 0)),
-                                Link(DhParam(0, 90, 0.16928, 0))]...),
-                        0.4,
-                        10
+                                Link(DhParam(0, 0, 0.150, 0)),
+                                Link(DhParam(0, 90, 0.1, 0))]...),
+                        1,
+                        4.90332
                 )]
         )
 end

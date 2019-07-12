@@ -17,7 +17,6 @@ julia> buildRowArray([1 2 3; 4 5 6; 7 8 9], 2)
 ```
 """
 function buildRowArray(matrix, row)::Array{Int64,2}
-    println("===========buildRowArray================")
     local rowArray = [0 for x in 1:size(matrix)[1]]
     rowArray[row] = 1
     return hcat(rowArray...)
@@ -40,8 +39,8 @@ macro slotFunc(matrix, row, slotFuncName)
 end
 
 function constructMotorFeatureMatrix(motors, gearRatios)
-    return hcat([
-    [motor.τStall / ratio
+    return hcat([[
+    motor.τStall / ratio
     motor.ωFree * ratio
     motor.price
     motor.mass
@@ -49,4 +48,15 @@ function constructMotorFeatureMatrix(motors, gearRatios)
     ratio] for motor in motors,
         ratio in gearRatios
    ]...)
+end
+
+function constructLinkFeatureMatrix(limb::VitaminOptimizer.Limb, rangeLength::Int64)
+    return hcat([[
+    link1
+    link2
+    link3
+    ] for link1 in range(limb.minLinks[1].dhParam.r, stop = limb.maxLinks[1].dhParam.r, length = rangeLength),
+        link2 in range(limb.minLinks[2].dhParam.r, stop = limb.maxLinks[2].dhParam.r, length = rangeLength),
+        link3 in range(limb.minLinks[3].dhParam.r, stop = limb.maxLinks[3].dhParam.r, length = rangeLength)
+    ]...)
 end

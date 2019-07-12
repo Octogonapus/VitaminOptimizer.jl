@@ -1,8 +1,4 @@
-tests = ["optimizerTest.jl"
-         "featureMatrixTest.jl"
-         "parseConstraintsTest.jl"
-         "parseMotorOptionsTest.jl"]
-
-for test in tests
-  include(test)
-end
+include("optimizerTest.jl")
+include("featureMatrixTest.jl")
+include("parseConstraintsTest.jl")
+include("parseMotorOptionsTest.jl")

@@ -117,7 +117,8 @@ failedToOptimize(model) = !(termination_status(model) == MOI.OPTIMAL ||
 
 Constrain the `model` to select only one variable from `slot`.
 """
-onlyOneSelection(model, slot) = @constraint(model, sum(slot) == 1)
+onlyOneSelection(model::Model, slot::Array{JuMP.GenericAffExpr{Float64,JuMP.VariableRef},1}) = @constraint(model, sum(slot) == 1)
+onlyOneSelection(model::Model, slot::Array{JuMP.GenericAffExpr{Float64,JuMP.VariableRef},2}) = onlyOneSelection(model, vcat(slot...))
 
 """
 	buildAndOptimizeModel!(model, limb, motors, gearRatios)
@@ -131,15 +132,21 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 
 	# Motor feature matrix.
 	numFmCols = length(motors) * length(gearRatios)
-	@variable(model, motorSlot1[1:numFmCols], Bin)
-	@variable(model, motorSlot2[1:numFmCols], Bin)
-	@variable(model, motorSlot3[1:numFmCols], Bin)
+	numFlCols = length(limb.maxLinks)
+	println(numFlCols)
 
-	motorSlots = [motorSlot1, motorSlot2, motorSlot3]
-	for slot in motorSlots
-		onlyOneSelection(model, slot)
-	end
+	@variable(model, ZabSlot1[1:numFmCols, 1:numFlCols], Bin)
+	XaSlot1 = collect(transpose(ones(Int64, numFmCols))) * ZabSlot1
+	XbSlot1 = ZabSlot1 * ones(Int64, numFlCols)
+	@variable(model, ZabSlot2[1:numFmCols, 1:numFlCols], Bin)
+	XaSlot2 = collect(transpose(ones(Int64, numFmCols))) * ZabSlot2
+	XbSlot2 = ZabSlot2 * ones(Int64, numFlCols)
+	@variable(model, ZabSlot3[1:numFmCols, 1:numFlCols], Bin)
+	XaSlot3 = collect(transpose(ones(Int64, numFmCols))) * ZabSlot3
+	XbSlot3 = ZabSlot3 * ones(Int64, numFlCols)
 
+	motorSlots = [XaSlot1, XaSlot2, XaSlot3]
+	onlyOneSelection.(model, motorSlots)
     Fm = FeatureMatrix(constructMotorFeatureMatrix(motors, gearRatios), motorSlots)
 	@slotFunc(Fm, 1, motorSlotτ)
 	@slotFunc(Fm, 2, motorSlotω)
@@ -148,34 +155,44 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 	@slotFunc(Fm, 5, motorSlotOmegaFunc)
 	@slotFunc(Fm, 6, motorSlotGearRatio)
 
+	linkSlots = [XbSlot1, XbSlot2, XbSlot3]
+	onlyOneSelection.(model, linkSlots)
+	Fl = FeatureMatrix(constructLinkFeatureMatrix(limb, 10), linkSlots)
+	@slotFunc(Fl, 1, linkSlotLink1)
+	@slotFunc(Fl, 2, linkSlotLink2)
+	@slotFunc(Fl, 3, linkSlotLink3)
+	@constraint(model, sum(x -> linkSlotLink1(x), 1:length(linkSlots)) == 1)
+	@constraint(model, sum(x -> linkSlotLink2(x), 1:length(linkSlots)) == 1)
+	@constraint(model, sum(x -> linkSlotLink3(x), 1:length(linkSlots)) == 1)
+
 	# Equation 3
-	@expression(model, τ1Required, limb.tipForce * (limbConfig[1].dhParam.r + limbConfig[2].dhParam.r +
-	 							   		limbConfig[3].dhParam.r) +
-								   gravity * (motorSlotMass(2) * limbConfig[1].dhParam.r +
-								   motorSlotMass(3) * (limbConfig[1].dhParam.r + limbConfig[2].dhParam.r)))
+	@expression(model, τ1Required, limb.tipForce * (linkSlotLink1(1) + linkSlotLink2(2) +
+	 							   		linkSlotLink3(3)) +
+								   gravity * (motorSlotMass(2) * linkSlotLink1(1) +
+								   motorSlotMass(3) * (linkSlotLink1(1) + linkSlotLink2(2))))
 
 	@constraint(model, eq3, motorSlotτ(1) .>= τ1Required)
 
 	# Equation 4
-	@expression(model, τ2Required, limb.tipForce * (limbConfig[2].dhParam.r + limbConfig[3].dhParam.r) +
-								   motorSlotMass(3) * gravity * limbConfig[2].dhParam.r)
+	@expression(model, τ2Required, limb.tipForce * (linkSlotLink2(2) + linkSlotLink3(3)) +
+								   motorSlotMass(3) * gravity * linkSlotLink2(2))
 	@constraint(model, eq4, motorSlotτ(2) .>= τ2Required)
 
 	# Equation 5
-	@expression(model, τ3Required, limb.tipForce * limbConfig[3].dhParam.r)
+	@expression(model, τ3Required, limb.tipForce * linkSlotLink3(3))
 	@constraint(model, eq5, motorSlotτ(3) .>= τ3Required)
 
 	# Equation 6
-	@expression(model, ω1Required, limb.tipVelocity / (limbConfig[1].dhParam.r + limbConfig[2].dhParam.r +
-	 									limbConfig[3].dhParam.r))
+	@expression(model, ω1Required, limb.tipVelocity / (linkSlotLink1(1) + linkSlotLink2(2) +
+	 									linkSlotLink3(3)))
 	@constraint(model, eq6, motorSlotω(1) .>= ω1Required)
 
 	# Equation 7
-	@expression(model, ω2Required, limb.tipVelocity / (limbConfig[2].dhParam.r + limbConfig[3].dhParam.r))
+	@expression(model, ω2Required, limb.tipVelocity / (linkSlotLink2(2) + linkSlotLink3(3)))
 	@constraint(model, eq7, motorSlotω(2) .>= ω2Required)
 
 	# Equation 8
-	@expression(model, ω3Required, limb.tipVelocity / limbConfig[3].dhParam.r)
+	@expression(model, ω3Required, limb.tipVelocity / linkSlotLink3(3))
 	@constraint(model, eq8, motorSlotω(3) .>= ω3Required)
 
 	objectiveFunction = sum(i -> motorSlotPrice(i), 1:length(motorSlots))

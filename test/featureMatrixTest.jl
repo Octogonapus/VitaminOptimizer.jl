@@ -3,6 +3,7 @@ using Test
 include("../src/parseMotorOptions.jl")
 include("../src/featureMatrix.jl")
 
+
 function featureMatrixToSet(fm)
     return Set([Set(fm[:,n]) for n=1:size(fm)[2]])
 end
@@ -75,4 +76,19 @@ end
              0.203
              (20.943 * (1/3)) / (1.4123 / (1/3))
              1/3]))
+end
+
+@testset "constructLinkFeatureMatrix" begin
+    limb, motors, gearRatios = VitaminOptimizer.loadProblem(
+        "testConstraints2.json",
+        "HephaestusArmLimbOne",
+        "testMotorOptions.json")
+    rangeLength = 10
+    Fl = constructLinkFeatureMatrix(limb, rangeLength)
+
+    @test length(Set(Fl[1,:])) == rangeLength
+
+    @test length(Set(Fl[2,:])) == rangeLength
+
+    @test length(Set(Fl[3,:])) == rangeLength
 end
