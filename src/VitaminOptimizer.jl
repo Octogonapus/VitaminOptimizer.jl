@@ -129,6 +129,14 @@ onlyOneSelection(model::Model, slot::Array{JuMP.GenericAffExpr{Float64,JuMP.Vari
 	onlyOneSelection(model, vcat(slot...))
 
 """
+	onlyOneSelection(model::Model, slot::Array{JuMP.VariableRef,1})
+
+Constrain the `model` to select only one variable from `slot`.
+"""
+onlyOneSelection(model::Model, slot::Array{JuMP.VariableRef,1}) =
+	@constraint(model, sum(slot) == 1)
+
+"""
 	buildAndOptimizeModel!(model, limb, motors, gearRatios)
 
 Add the initial variables and constraints to the `model` using a feature matrix
@@ -153,9 +161,9 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 	# XaSlot3 = collect(transpose(ones(Int64, numFmCols))) * ZabSlot3
 	# XbSlot3 = ZabSlot3 * ones(Int64, numFlCols)
 
-	@variable(model, motorSlot1[1:numCols], Bin)
-	@variable(model, motorSlot2[1:numCols], Bin)
-	@variable(model, motorSlot3[1:numCols], Bin)
+	@variable(model, motorSlot1[1:numFmCols], Bin)
+	@variable(model, motorSlot2[1:numFmCols], Bin)
+	@variable(model, motorSlot3[1:numFmCols], Bin)
 	motorSlots = [motorSlot1, motorSlot2, motorSlot3]
     Fm = FeatureMatrix(constructMotorFeatureMatrix(motors, gearRatios), motorSlots)
 	onlyOneSelection.(model, motorSlots)
@@ -167,9 +175,9 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 	@slotFunc(Fm, 6, motorSlotGearRatio)
 	@slotFunc(Fm, 7, motorSlotLnω)
 
-	@variable(model, limbSlot[1:numCols], Bin)
+	@variable(model, limbSlot[1:numFlCols], Bin)
 	limbSlots = [limbSlot]
-	onlyOneSelection.(model, linkSlots)
+	onlyOneSelection.(model, limbSlots)
 	Fl = FeatureMatrix(constructLinkFeatureMatrix(limb, 10), limbSlots)
 	onlyOneSelection.(model, limbSlots)
 	@slotFunc(Fl, 1, limbSlotLink1)
