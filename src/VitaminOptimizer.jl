@@ -176,8 +176,6 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 	@slotFunc(Fl, 7, limbSlotLnLink123)
 	@slotFunc(Fl, 8, limbSlotLnLink23)
 
-	buildRowArray(Fl.matrix, 1) * Fl.matrix * limbSlot
-
 	# Equation 3
 	@expression(model, τ1Required, limb.tipForce * (limbSlotLink1() + limbSlotLink2() + limbSlotLink3()) +
 								   gravity * (motorSlotMass(2) * limbSlotLink1() +
