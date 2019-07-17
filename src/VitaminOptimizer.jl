@@ -145,21 +145,8 @@ model to minimize price using the optimizer in the `model`.
 """
 function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 	limbConfig = limb.minLinks
-
-	# Motor feature matrix.
 	numFmCols = length(motors) * length(gearRatios)
-	numFlCols = length(limb.maxLinks)
-	println(numFlCols)
-
-	# @variable(model, ZabSlot1[1:numFmCols, 1:numFlCols], Bin)
-	# XaSlot1 = collect(transpose(ones(Int64, numFmCols))) * ZabSlot1
-	# XbSlot1 = ZabSlot1 * ones(Int64, numFlCols)
-	# @variable(model, ZabSlot2[1:numFmCols, 1:numFlCols], Bin)
-	# XaSlot2 = collect(transpose(ones(Int64, numFmCols))) * ZabSlot2
-	# XbSlot2 = ZabSlot2 * ones(Int64, numFlCols)
-	# @variable(model, ZabSlot3[1:numFmCols, 1:numFlCols], Bin)
-	# XaSlot3 = collect(transpose(ones(Int64, numFmCols))) * ZabSlot3
-	# XbSlot3 = ZabSlot3 * ones(Int64, numFlCols)
+	numFlCols = 10^length(limb.maxLinks)
 
 	@variable(model, motorSlot1[1:numFmCols], Bin)
 	@variable(model, motorSlot2[1:numFmCols], Bin)
@@ -189,8 +176,10 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 	@slotFunc(Fl, 7, limbSlotLnLink123)
 	@slotFunc(Fl, 8, limbSlotLnLink23)
 
+	buildRowArray(Fl.matrix, 1) * Fl.matrix * limbSlot
+
 	# Equation 3
-	@expression(model, τ1Required, limb.tipForce * (limbSlotLink1() + limbSlotLink2(2) + linkSlotLink3(3)) +
+	@expression(model, τ1Required, limb.tipForce * (limbSlotLink1() + limbSlotLink2() + limbSlotLink3()) +
 								   gravity * (motorSlotMass(2) * limbSlotLink1() +
 								   motorSlotMass(3) * (limbSlotLink1() + limbSlotLink2())))
 	@constraint(model, eq3, motorSlotτ(1) .>= τ1Required)
