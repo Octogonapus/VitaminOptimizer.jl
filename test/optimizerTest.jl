@@ -8,7 +8,8 @@ include("../src/gurobiModel.jl")
         makeGurobiModel!(10),
         "../res/constraints2.json",
         "HephaestusArmLimbOne",
-        "../res/motorOptions.json"
+        "../res/motorOptions.json",
+        "optimizationTestResults_loadAndOptimize.txt"
     )
 
     @test size(paretoSolutions) == (20,3)
@@ -30,7 +31,8 @@ include("../src/gurobiModel.jl")
             makeGLPKModel(),
             "testConstraints2.json",
             "HephaestusArmLimbOne",
-            "testMotorOptions.json"
+            "testMotorOptions.json",
+            "optimizationTestResults_loadAndOptimzeAtParetoFrontier.txt"
         )
 
         # Check the motors in the solution on the Pareto frontier

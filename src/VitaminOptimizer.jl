@@ -144,7 +144,7 @@ Add the initial variables and constraints to the `model` using a feature matrix
 built from `limb`, and the coproduct of `motors` and `gearRatios`. Optimize the
 model to minimize price using the optimizer in the `model`.
 """
-function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
+function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, filename::String)
 	limbConfig = limb.minLinks
 	numFmCols = length(motors) * length(gearRatios)
 	linkRangeLength = 5
@@ -208,8 +208,6 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 	@constraint(model, limbSlotLink3(1) == limbSlotLink3(2))
 	@constraint(model, limbSlotLink3(1) == limbSlotLink3(3))
 
-	println("size(Fml.matrix)=", size(Fml.matrix))
-
 	# Equation 3
 	@expression(model, τ1Required, limb.tipForce * (limbSlotLink1() + limbSlotLink2() + limbSlotLink3()) +
 								   gravity * (massTimesLink1(2) + massTimesLink1(3) + massTimesLink2(3)))
@@ -250,6 +248,7 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 
 		println("Found solution:")
 		printOptimizationResult!(model, solution)
+		saveOptimizationResult!(model, solution, filename)
 
 		return (model, objectiveFunction, solution, Fml.matrix, slots)
 	end
@@ -274,6 +273,23 @@ function printOptimizationResult!(model, optimalMotors)
 	end
 end
 
+function saveOptimizationResult!(model, solution, filename)
+	open(filename, "a") do file
+		if termination_status(model) == MOI.TIME_LIMIT
+			write(file, "-------------------------------------------------------\n")
+			write(file, "-------------------SUBOPTIMAL RESULT-------------------\n")
+			write(file, "-------------------------------------------------------\n")
+		end
+
+		write(file, "Optimal objective: ", objective_value(model), "\n")
+		write(file, "Optimal motors:\n")
+		for (mtr, ratio, link1, link2, link3) in solution
+			write(file, "\t", string(mtr), ", ratio=", ratio, ", link1=", link1,
+				", link2=", link2, ", link3=", link3, "\n")
+		end
+	end
+end
+
 """
 	loadProblem(constraintsFile::String, limbName::String, motorOptionsFile::String)
 
@@ -292,7 +308,7 @@ function loadProblem(constraintsFile::String, limbName::String, motorOptionsFile
 end
 
 """
-	loadAndOptimize!(model::Model, constraintsFile::String, limbName::String, motorOptionsFile::String)
+	loadAndOptimize!(model::Model, constraintsFile::String, limbName::String, motorOptionsFile::String, resultsFile::String)
 
 Load the constraints from `constraintsFile` and the motor options from
 `motorOptionsFile`. Select limb `limbName` from the constraints. Uses the
@@ -308,11 +324,11 @@ Optimal motors:
     VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.077
 ```
 """
-function loadAndOptimize!(model::Model, constraintsFile::String, limbName::String, motorOptionsFile::String)
+function loadAndOptimize!(model::Model, constraintsFile::String, limbName::String, motorOptionsFile::String, resultsFile::String)
 	limb, motors, gearRatios = loadProblem(constraintsFile, limbName, motorOptionsFile)
 
 	println("Optimizing initial model.")
-	model, objectiveFunction, solution, featureMatrix, allSlots = buildAndOptimizeModel!(model, limb, motors, gearRatios)
+	model, objectiveFunction, solution, featureMatrix, allSlots = buildAndOptimizeModel!(model, limb, motors, gearRatios, resultsFile)
 
 	println("Exploring Pareto frontier.")
 	otherSolutions = exploreParetoFrontier(model, objective_value(model), featureMatrix, allSlots, motors)
@@ -322,7 +338,7 @@ function loadAndOptimize!(model::Model, constraintsFile::String, limbName::Strin
 end
 
 """
-	loadAndOptimzeAtParetoFrontier!(model::Model, constraintsFile::String, limbName::String, motorOptionsFile::String)
+	loadAndOptimzeAtParetoFrontier!(model::Model, constraintsFile::String, limbName::String, motorOptionsFile::String, resultsFile::String)
 
 Load the constraints from `constraintsFile` and the motor options from
 `motorOptionsFile`. Select limb `limbName` from the constraints. Uses the
@@ -340,11 +356,11 @@ Optimal motors:
     VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.111111
 ```
 """
-function loadAndOptimzeAtParetoFrontier!(model::Model, constraintsFile::String, limbName::String, motorOptionsFile::String)
+function loadAndOptimzeAtParetoFrontier!(model::Model, constraintsFile::String, limbName::String, motorOptionsFile::String, resultsFile::String)
 	limb, motors, gearRatios = loadProblem(constraintsFile, limbName, motorOptionsFile)
 
 	println("Optimizing initial model.")
-	model, objectiveFunction, solution, featureMatrix, allSlots = buildAndOptimizeModel!(model, limb, motors, gearRatios)
+	model, objectiveFunction, solution, featureMatrix, allSlots = buildAndOptimizeModel!(model, limb, motors, gearRatios, resultsFile)
 
 	println("Optimizing at Pareto frontier.")
 	solution =  optimizeAtParetoFrontier(model, objective_value(model), objectiveFunction, featureMatrix, allSlots, motors)
