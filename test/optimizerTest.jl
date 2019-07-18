@@ -1,11 +1,14 @@
 using Test, VitaminOptimizer
 
+include("../src/gurobiModel.jl")
+
 @testset "loadAndOptimize!" begin
     paretoSolutions = loadAndOptimize!(
-        makeGLPKModel(),
-        "testConstraints1.json",
+        #makeGLPKModel(),
+        makeGurobiModel!(10),
+        "../res/constraints2.json",
         "HephaestusArmLimbOne",
-        "testMotorOptions.json"
+        "../res/motorOptions.json"
     )
 
     @test size(paretoSolutions) == (20,3)
@@ -25,7 +28,7 @@ using Test, VitaminOptimizer
     @testset "loadAndOptimzeAtParetoFrontier!" begin
         fullyOptimalSolution = loadAndOptimzeAtParetoFrontier!(
             makeGLPKModel(),
-            "testConstraints1.json",
+            "testConstraints2.json",
             "HephaestusArmLimbOne",
             "testMotorOptions.json"
         )

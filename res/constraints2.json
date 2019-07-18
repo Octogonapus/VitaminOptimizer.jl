@@ -8,21 +8,21 @@
     "basePan": {
     	"index":0,
       "dh-D": 135.0,
-      "dh-A": 0.001,
+      "dh-A": 1.0,
       "dh-Alpha": -90.0,
       "dh-Theta": 0.0
     },
     "elbow": {
     	"index":2,
       "dh-D": 0.0,
-      "dh-A": 100.0,
+      "dh-A": 1.0,
       "dh-Alpha": 0.0,
       "dh-Theta": 90.0
     },
     "baseTilt": {
     	"index":1,
       "dh-D": 0.0,
-      "dh-A": 150.0,
+      "dh-A": 1.0,
       "dh-Alpha": 0.0,
       "dh-Theta": 0.0
     }
@@ -31,7 +31,7 @@
     "basePan": {
     	"index":0,
       "dh-D": 135.0,
-      "dh-A": 100,
+      "dh-A": 200,
       "dh-Alpha": -90.0,
       "dh-Theta": 0.0
     },

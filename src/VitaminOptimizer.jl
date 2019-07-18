@@ -38,12 +38,13 @@ findMotorIndex(featureMatrixColumn, motors) = findfirst(
 	motors)
 
 """
-	findOptimalMotors(featureMatrix, allSlots, motors)
+	findOptimalChoices(featureMatrix, allSlots, motors)
 
-Find the optimal motors after the most recent optimization.
+Find the optimal motors, gear ratios, and link lengths.
 """
-findOptimalMotors(featureMatrix, allSlots, motors) =
-	hcat([(motors[findMotorIndex(col, motors)], col[6]) for col in optimalColumns(featureMatrix, allSlots)]...)
+findOptimalChoices(featureMatrix, allSlots, motors) =
+	hcat([(motors[findMotorIndex(col, motors)], col[6], col[8], col[9], col[10])
+		for col in optimalColumns(featureMatrix, allSlots)]...)
 
 """
 	exploreParetoFrontier(model::Model, optimalObjectiveValue, featureMatrix, allSlots, motors)
@@ -64,7 +65,7 @@ function exploreParetoFrontier(model::Model, optimalObjectiveValue, featureMatri
 		return []
 	else
 		# Record the current solution.
-		solution = findOptimalMotors(featureMatrix, allSlots, motors)
+		solution = findOptimalChoices(featureMatrix, allSlots, motors)
 		printOptimizationResult!(model, solution)
 
 		# Keep finding more solutions.
@@ -100,7 +101,7 @@ function optimizeAtParetoFrontier(model::Model, optimalObjectiveValue, objective
 	if failedToOptimize(model)
 		error("Failed to opimize the model at the Pareto frontier.")
 	else
-		return findOptimalMotors(featureMatrix, allSlots, motors)
+		return findOptimalChoices(featureMatrix, allSlots, motors)
 	end
 end
 
@@ -133,7 +134,7 @@ onlyOneSelection(model::Model, slot::Array{JuMP.GenericAffExpr{Float64,JuMP.Vari
 
 Constrain the `model` to select only one variable from `slot`.
 """
-onlyOneSelection(model::Model, slot::Array{JuMP.VariableRef,1}) =
+onlyOneSelection(model::Model, slot::Array{JuMP.VariableRef,T}) where T =
 	@constraint(model, sum(slot) == 1)
 
 """
@@ -146,47 +147,77 @@ model to minimize price using the optimizer in the `model`.
 function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 	limbConfig = limb.minLinks
 	numFmCols = length(motors) * length(gearRatios)
-	numFlCols = 10^length(limb.maxLinks)
+	linkRangeLength = 5
+	numFlCols = linkRangeLength^length(limb.maxLinks)
 
-	@variable(model, motorSlot1[1:numFmCols], Bin)
-	@variable(model, motorSlot2[1:numFmCols], Bin)
-	@variable(model, motorSlot3[1:numFmCols], Bin)
-	motorSlots = [motorSlot1, motorSlot2, motorSlot3]
-    Fm = FeatureMatrix(constructMotorFeatureMatrix(motors, gearRatios), motorSlots)
-	onlyOneSelection.(model, motorSlots)
-	@slotFunc(Fm, 1, motorSlotτ)
-	@slotFunc(Fm, 2, motorSlotω)
-	@slotFunc(Fm, 3, motorSlotPrice)
-	@slotFunc(Fm, 4, motorSlotMass)
-	@slotFunc(Fm, 5, motorSlotOmegaFunc)
-	@slotFunc(Fm, 6, motorSlotGearRatio)
-	@slotFunc(Fm, 7, motorSlotLnω)
+	# @variable(model, motorSlot1[1:numFmCols], Bin)
+	# @variable(model, motorSlot2[1:numFmCols], Bin)
+	# @variable(model, motorSlot3[1:numFmCols], Bin)
+	# motorSlots = [motorSlot1, motorSlot2, motorSlot3]
+    # Fm = FeatureMatrix(constructMotorFeatureMatrix(motors, gearRatios), motorSlots)
+	# onlyOneSelection.(model, motorSlots)
+	# @slotFunc(Fm, 1, motorSlotτ)
+	# @slotFunc(Fm, 2, motorSlotω)
+	# @slotFunc(Fm, 3, motorSlotPrice)
+	# @slotFunc(Fm, 4, motorSlotMass)
+	# @slotFunc(Fm, 5, motorSlotOmegaFunc)
+	# @slotFunc(Fm, 6, motorSlotGearRatio)
+	# @slotFunc(Fm, 7, motorSlotLnω)
+	#
+	# @variable(model, limbSlot[1:numFlCols], Bin)
+	# limbSlots = [limbSlot]
+	# onlyOneSelection.(model, limbSlots)
+	# Fl = FeatureMatrix(constructLinkFeatureMatrix(limb, linkRangeLength), limbSlots)
+	# onlyOneSelection.(model, limbSlots)
+	# @slotFunc(Fl, 1, limbSlotLink1)
+	# @slotFunc(Fl, 2, limbSlotLink2)
+	# @slotFunc(Fl, 3, limbSlotLink3)
+	# @slotFunc(Fl, 4, limbSlotLnLink1)
+	# @slotFunc(Fl, 5, limbSlotLnLink2)
+	# @slotFunc(Fl, 6, limbSlotLnLink3)
+	# @slotFunc(Fl, 7, limbSlotLnLink123)
+	# @slotFunc(Fl, 8, limbSlotLnLink23)
 
-	@variable(model, limbSlot[1:numFlCols], Bin)
-	limbSlots = [limbSlot]
-	onlyOneSelection.(model, limbSlots)
-	Fl = FeatureMatrix(constructLinkFeatureMatrix(limb, 10), limbSlots)
-	onlyOneSelection.(model, limbSlots)
-	@slotFunc(Fl, 1, limbSlotLink1)
-	@slotFunc(Fl, 2, limbSlotLink2)
-	@slotFunc(Fl, 3, limbSlotLink3)
-	@slotFunc(Fl, 4, limbSlotLnLink1)
-	@slotFunc(Fl, 5, limbSlotLnLink2)
-	@slotFunc(Fl, 6, limbSlotLnLink3)
-	@slotFunc(Fl, 7, limbSlotLnLink123)
-	@slotFunc(Fl, 8, limbSlotLnLink23)
+	@variable(model, slot1[1:numFmCols * numFlCols], Bin)
+	@variable(model, slot2[1:numFmCols * numFlCols], Bin)
+	@variable(model, slot3[1:numFmCols * numFlCols], Bin)
+	slots = [slot1, slot2, slot3]
+	Fml = FeatureMatrix(constructMotorAndLinkFeatureMatrix(motors, gearRatios, limb, linkRangeLength), slots)
+	onlyOneSelection.(model, slots)
+	@slotFunc(Fml, 1, motorSlotτ)
+	@slotFunc(Fml, 2, motorSlotω)
+	@slotFunc(Fml, 3, motorSlotPrice)
+	@slotFunc(Fml, 4, motorSlotMass)
+	@slotFunc(Fml, 5, motorSlotOmegaFunc)
+	@slotFunc(Fml, 6, motorSlotGearRatio)
+	@slotFunc(Fml, 7, motorSlotLnω)
+	@slotFunc(Fml, 8, limbSlotLink1)
+	@slotFunc(Fml, 9, limbSlotLink2)
+	@slotFunc(Fml, 10, limbSlotLink3)
+	@slotFunc(Fml, 11, limbSlotLnLink1)
+	@slotFunc(Fml, 12, limbSlotLnLink2)
+	@slotFunc(Fml, 13, limbSlotLnLink3)
+	@slotFunc(Fml, 14, limbSlotLnLink123)
+	@slotFunc(Fml, 15, limbSlotLnLink23)
+	@slotFunc(Fml, 16, massTimesLink1)
+	@slotFunc(Fml, 17, massTimesLink2)
+	@constraint(model, limbSlotLink1(1) == limbSlotLink1(2))
+	@constraint(model, limbSlotLink1(1) == limbSlotLink1(3))
+	@constraint(model, limbSlotLink2(1) == limbSlotLink2(2))
+	@constraint(model, limbSlotLink2(1) == limbSlotLink2(3))
+	@constraint(model, limbSlotLink3(1) == limbSlotLink3(2))
+	@constraint(model, limbSlotLink3(1) == limbSlotLink3(3))
 
-	# make all terms of m3*l2, etc. and add constraints for m3 + l2 = 2, etc.
+	println("size(Fml.matrix)=", size(Fml.matrix))
 
 	# Equation 3
 	@expression(model, τ1Required, limb.tipForce * (limbSlotLink1() + limbSlotLink2() + limbSlotLink3()) +
-								   gravity * (motorSlotMass(2) * limbSlotLink1() +
-								   motorSlotMass(3) * (limbSlotLink1() + limbSlotLink2())))
+								   gravity * (massTimesLink1(2) + massTimesLink1(3) + massTimesLink2(3)))
 	@constraint(model, eq3, motorSlotτ(1) .>= τ1Required)
 
 	# Equation 4
 	@expression(model, τ2Required, limb.tipForce * (limbSlotLink2() + limbSlotLink3()) +
-								   gravity * motorSlotMass(3) * limbSlotLink2())
+								   gravity * massTimesLink2(3))
 	@constraint(model, eq4, motorSlotτ(2) .>= τ2Required)
 
 	# Equation 5
@@ -205,7 +236,7 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 	@expression(model, ω3Required, log(limb.tipVelocity) - limbSlotLnLink3())
 	@constraint(model, eq8, motorSlotLnω(3) .>= ω3Required)
 
-	objectiveFunction = sum(i -> motorSlotPrice(i), 1:length(motorSlots))
+	objectiveFunction = sum(i -> motorSlotPrice(i), 1:length(slots))
 	@objective(model, Min, objectiveFunction)
 
 	# Run the first optimization pass.
@@ -215,12 +246,12 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios)
 		error("The model was not solved correctly.")
 	else
 		# Get the first solution and use it to find the other solutions.
-		solution = findOptimalMotors(Fm.matrix, motorSlots, motors)
+		solution = findOptimalChoices(Fml.matrix, slots, motors)
 
 		println("Found solution:")
 		printOptimizationResult!(model, solution)
 
-		return (model, objectiveFunction, solution, Fm.matrix, motorSlots)
+		return (model, objectiveFunction, solution, Fml.matrix, slots)
 	end
 end
 
@@ -237,8 +268,9 @@ function printOptimizationResult!(model, optimalMotors)
 
 	println("Optimal objective: ", objective_value(model))
 	println("Optimal motors:")
-	for (mtr, ratio) in optimalMotors
-		println("\t", mtr, ", ratio=", ratio)
+	for (mtr, ratio, link1, link2, link3) in optimalMotors
+		println("\t", mtr, ", ratio=", ratio, ", link1=", link1,
+			", link2=", link2, ", link3=", link3)
 	end
 end
 
