@@ -152,7 +152,7 @@ model to minimize price using the optimizer in the `model`.
 function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, filename::String)
 	limbConfig = limb.minLinks
 	numFmCols = length(motors) * length(gearRatios)
-	linkRangeLength = 8
+	linkRangeLength = 5
 	numFlCols = linkRangeLength^length(limb.maxLinks)
 
 	# @variable(model, motorSlot1[1:numFmCols], Bin)
