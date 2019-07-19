@@ -43,9 +43,7 @@ function constructMotorFeatureMatrix(motors, gearRatios)
     motor.ωFree * ratio
     motor.price
     motor.mass
-    (motor.ωFree * ratio) / (motor.τStall / ratio)
     ratio
-    log(motor.ωFree * ratio)
     ] for motor in motors,
         ratio in gearRatios
     ]...)
@@ -84,8 +82,6 @@ function constructMotorAndLinkFeatureMatrix(motors, gearRatios, limb::VitaminOpt
     log(link3)
     log(link1 + link2 + link3)
     log(link2 + link3)
-    motor.mass * link1
-    motor.mass * link2
     ] for motor in motors,
         ratio in gearRatios,
         link1 in range(limb.minLinks[1].dhParam.r, stop = limb.maxLinks[1].dhParam.r, length = rangeLength),

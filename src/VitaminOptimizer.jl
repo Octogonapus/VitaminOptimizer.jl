@@ -48,19 +48,19 @@ and mass equal to those in the `featureMatrixColumn` (after un-applying the gear
 """
 findMotorIndex(featureMatrixColumn, motors) = findfirst(
 	# Approximate equality on τStall and ωFree because we are un-applying the gear ratio.
-	x::Motor -> x.τStall ≈ featureMatrixColumn[1] * featureMatrixColumn[6] &&
-		x.ωFree ≈ featureMatrixColumn[2] / featureMatrixColumn[6] &&
+	x::Motor -> x.τStall ≈ featureMatrixColumn[1] * featureMatrixColumn[5] &&
+		x.ωFree ≈ featureMatrixColumn[2] / featureMatrixColumn[5] &&
 		x.price == featureMatrixColumn[3] &&
 		x.mass == featureMatrixColumn[4],
 	motors)
 
 """
-	findOptimalChoices(featureMatrix, motors)
+	findOptimalChoices(featureMatrix, motors, links)
 
 Find the optimal motors, gear ratios, and link lengths.
 """
-findOptimalChoices(featureMatrix::FeatureMatrix, motors) =
-	hcat([(motors[findMotorIndex(col, motors)], col[6], col[8], col[9], col[10])
+findOptimalChoices(featureMatrix::FeatureMatrix, motors, links) =
+	hcat([(motors[findMotorIndex(col, motors)], col[5], links[1], links[2], links[3])
 		for col in optimalColumns(featureMatrix)]...)
 
 """
@@ -107,19 +107,15 @@ end
 
 """
 	optimizeAtParetoFrontier(model::Model, objectiveFunction,
-		featureMatrix::FeatureMatrix, motors, filename::String)
+		featureMatrix::FeatureMatrix, links, motors, filename::String)
 
 Further optimize the `model` at the Pareto frontier defined by the current objective value.
 """
 function optimizeAtParetoFrontier(model::Model, objectiveFunction,
-	featureMatrix::FeatureMatrix, motors, filename::String)
+	featureMatrix::FeatureMatrix, links, motors, filename::String)
 	stayAtParetoFrontier(model, objectiveFunction)
 
-	@slotFunc(featureMatrix, 8, limbSlotLink1)
-	@slotFunc(featureMatrix, 9, limbSlotLink2)
-	@slotFunc(featureMatrix, 10, limbSlotLink3)
-
-	@objective(model, Max, limbSlotLink1() + limbSlotLink2() + limbSlotLink3())
+	@objective(model, Max, sum(links))
 
 	optimize!(model)
 
@@ -127,9 +123,9 @@ function optimizeAtParetoFrontier(model::Model, objectiveFunction,
 		error("Failed to opimize the model at the Pareto frontier. Ending with objective value: " *
 			string(objective_value(model)))
 	else
-		solution = findOptimalChoices(featureMatrix, motors)
-		printOptimizationResult!(model, solution)
-		saveOptimizationResult(model, solution, filename)
+		solution = findOptimalChoices(featureMatrix, motors, value.(links))
+		printOptimizationResult!(model, solution, value.(links))
+		saveOptimizationResult(model, solution, value.(links), filename)
 		return solution
 	end
 end
@@ -155,20 +151,26 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, fi
 	linkRangeLength = 5
 	numFlCols = linkRangeLength^length(limb.maxLinks)
 
-	# @variable(model, motorSlot1[1:numFmCols], Bin)
-	# @variable(model, motorSlot2[1:numFmCols], Bin)
-	# @variable(model, motorSlot3[1:numFmCols], Bin)
-	# motorSlots = [motorSlot1, motorSlot2, motorSlot3]
-    # Fm = FeatureMatrix(constructMotorFeatureMatrix(motors, gearRatios), motorSlots)
-	# onlyOneSelection.(model, motorSlots)
-	# @slotFunc(Fm, 1, motorSlotτ)
-	# @slotFunc(Fm, 2, motorSlotω)
-	# @slotFunc(Fm, 3, motorSlotPrice)
-	# @slotFunc(Fm, 4, motorSlotMass)
-	# @slotFunc(Fm, 5, motorSlotOmegaFunc)
-	# @slotFunc(Fm, 6, motorSlotGearRatio)
-	# @slotFunc(Fm, 7, motorSlotLnω)
-	#
+	@variable(model, slot1[1:numFmCols], Bin)
+	@variable(model, slot2[1:numFmCols], Bin)
+	@variable(model, slot3[1:numFmCols], Bin)
+	slots = [slot1, slot2, slot3]
+    Fm = FeatureMatrix(constructMotorFeatureMatrix(motors, gearRatios), slots)
+
+	@slotFunc(Fm, 1, motorSlotτ)
+	@slotFunc(Fm, 2, motorSlotω)
+	@slotFunc(Fm, 3, motorSlotPrice)
+	@slotFunc(Fm, 4, motorSlotMass)
+	@slotFunc(Fm, 5, motorSlotGearRatio)
+
+	@constraint(model, sum(slot1) == 1)
+	@constraint(model, sum(slot2) == 1)
+	@constraint(model, sum(slot3) == 1)
+
+	@variable(model, limb.minLinks[1].dhParam.r <= link1 <= limb.maxLinks[1].dhParam.r, Int)
+	@variable(model, limb.minLinks[2].dhParam.r <= link2 <= limb.maxLinks[2].dhParam.r, Int)
+	@variable(model, limb.minLinks[3].dhParam.r <= link3 <= limb.maxLinks[3].dhParam.r, Int)
+
 	# @variable(model, limbSlot[1:numFlCols], Bin)
 	# limbSlots = [limbSlot]
 	# onlyOneSelection.(model, limbSlots)
@@ -183,65 +185,68 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, fi
 	# @slotFunc(Fl, 7, limbSlotLnLink123)
 	# @slotFunc(Fl, 8, limbSlotLnLink23)
 
-	@variable(model, slot1[1:numFmCols * numFlCols], Bin)
-	@variable(model, slot2[1:numFmCols * numFlCols], Bin)
-	@variable(model, slot3[1:numFmCols * numFlCols], Bin)
-	slots = [slot1, slot2, slot3]
-	Fml = FeatureMatrix(constructMotorAndLinkFeatureMatrix(motors, gearRatios, limb, linkRangeLength), slots)
-
-	@slotFunc(Fml, 1, motorSlotτ)
-	@slotFunc(Fml, 2, motorSlotω)
-	@slotFunc(Fml, 3, motorSlotPrice)
-	@slotFunc(Fml, 4, motorSlotMass)
-	@slotFunc(Fml, 5, motorSlotOmegaFunc)
-	@slotFunc(Fml, 6, motorSlotGearRatio)
-	@slotFunc(Fml, 7, motorSlotLnω)
-	@slotFunc(Fml, 8, limbSlotLink1)
-	@slotFunc(Fml, 9, limbSlotLink2)
-	@slotFunc(Fml, 10, limbSlotLink3)
-	@slotFunc(Fml, 11, limbSlotLnLink1)
-	@slotFunc(Fml, 12, limbSlotLnLink2)
-	@slotFunc(Fml, 13, limbSlotLnLink3)
-	@slotFunc(Fml, 14, limbSlotLnLink123)
-	@slotFunc(Fml, 15, limbSlotLnLink23)
-	@slotFunc(Fml, 16, massTimesLink1)
-	@slotFunc(Fml, 17, massTimesLink2)
-
-	@constraint(model, sum(slot1) == 1)
-	@constraint(model, sum(slot2) == 1)
-	@constraint(model, sum(slot3) == 1)
-	@constraint(model, limbSlotLink1(1) == limbSlotLink1(2))
-	@constraint(model, limbSlotLink1(1) == limbSlotLink1(3))
-	@constraint(model, limbSlotLink2(1) == limbSlotLink2(2))
-	@constraint(model, limbSlotLink2(1) == limbSlotLink2(3))
-	@constraint(model, limbSlotLink3(1) == limbSlotLink3(2))
-	@constraint(model, limbSlotLink3(1) == limbSlotLink3(3))
+	# @variable(model, slot1[1:numFmCols * numFlCols], Bin)
+	# @variable(model, slot2[1:numFmCols * numFlCols], Bin)
+	# @variable(model, slot3[1:numFmCols * numFlCols], Bin)
+	# slots = [slot1, slot2, slot3]
+	# Fml = FeatureMatrix(constructMotorAndLinkFeatureMatrix(motors, gearRatios, limb, linkRangeLength), slots)
+	# println("1")
+	#
+	# @slotFunc(Fml, 1, motorSlotτ)
+	# @slotFunc(Fml, 2, motorSlotω)
+	# @slotFunc(Fml, 3, motorSlotPrice)
+	# @slotFunc(Fml, 4, motorSlotMass)
+	# @slotFunc(Fml, 5, motorSlotOmegaFunc)
+	# @slotFunc(Fml, 6, motorSlotGearRatio)
+	# @slotFunc(Fml, 7, motorSlotLnω)
+	# @slotFunc(Fml, 8, limbSlotLink1)
+	# @slotFunc(Fml, 9, limbSlotLink2)
+	# @slotFunc(Fml, 10, limbSlotLink3)
+	# @slotFunc(Fml, 11, limbSlotLnLink1)
+	# @slotFunc(Fml, 12, limbSlotLnLink2)
+	# @slotFunc(Fml, 13, limbSlotLnLink3)
+	# @slotFunc(Fml, 14, limbSlotLnLink123)
+	# @slotFunc(Fml, 15, limbSlotLnLink23)
+	#
+	# @constraint(model, sum(slot1) == 1)
+	# @constraint(model, sum(slot2) == 1)
+	# @constraint(model, sum(slot3) == 1)
+	# @constraint(model, limbSlotLink1(1) == limbSlotLink1(2))
+	# @constraint(model, limbSlotLink1(1) == limbSlotLink1(3))
+	# @constraint(model, limbSlotLink2(1) == limbSlotLink2(2))
+	# @constraint(model, limbSlotLink2(1) == limbSlotLink2(3))
+	# @constraint(model, limbSlotLink3(1) == limbSlotLink3(2))
+	# @constraint(model, limbSlotLink3(1) == limbSlotLink3(3))
 
 	# Equation 3
-	@expression(model, τ1Required, limb.tipForce * (limbSlotLink1() + limbSlotLink2() + limbSlotLink3()) +
-								   gravity * (massTimesLink1(2) + massTimesLink1(3) + massTimesLink2(3)))
+	@expression(model, τ1Required, limb.tipForce * (link1 / 1000 + link2 / 1000 + link3 / 1000) +
+								   gravity * (motorSlotMass(2) * link1 / 1000 +
+								   motorSlotMass(3) * (link1 / 1000) + motorSlotMass(3) * (link3 / 1000)))
 	@constraint(model, eq3, motorSlotτ(1) .>= τ1Required)
 
 	# Equation 4
-	@expression(model, τ2Required, limb.tipForce * (limbSlotLink2() + limbSlotLink3()) +
-								   gravity * massTimesLink2(3))
+	@expression(model, τ2Required, limb.tipForce * (link2 / 1000 + link3 / 1000) +
+								   gravity * motorSlotMass(3) * (link2 / 1000))
 	@constraint(model, eq4, motorSlotτ(2) .>= τ2Required)
 
 	# Equation 5
-	@expression(model, τ3Required, limb.tipForce * limbSlotLink3())
+	@expression(model, τ3Required, limb.tipForce * (link3 / 1000))
 	@constraint(model, eq5, motorSlotτ(3) .>= τ3Required)
 
 	# Equation 6
-	@expression(model, ω1Required, log(limb.tipVelocity) - limbSlotLnLink123())
-	@constraint(model, eq6, motorSlotLnω(1) .>= ω1Required)
+	@constraint(model, eq6, motorSlotω(1) * (link1 / 1000 + link2 / 1000 + link3 / 1000) .>= limb.tipVelocity)
+	# @expression(model, ω1Required, log(limb.tipVelocity) - limbSlotLnLink123())
+	# @constraint(model, eq6, motorSlotLnω(1) .>= ω1Required)
 
 	# Equation 7
-	@expression(model, ω2Required, log(limb.tipVelocity) - limbSlotLnLink23())
-	@constraint(model, eq7, motorSlotLnω(2) .>= ω2Required)
+	@constraint(model, eq7, motorSlotω(2) * (link2 / 1000 + link3 / 1000) .>= limb.tipVelocity)
+	# @expression(model, ω2Required, log(limb.tipVelocity) - limbSlotLnLink23())
+	# @constraint(model, eq7, motorSlotLnω(2) .>= ω2Required)
 
 	# Equation 8
-	@expression(model, ω3Required, log(limb.tipVelocity) - limbSlotLnLink3())
-	@constraint(model, eq8, motorSlotLnω(3) .>= ω3Required)
+	@constraint(model, eq8, motorSlotω(3) * (link3 / 1000) .>= limb.tipVelocity)
+	# @expression(model, ω3Required, log(limb.tipVelocity) - limbSlotLnLink3())
+	# @constraint(model, eq8, motorSlotLnω(3) .>= ω3Required)
 
 	objectiveFunction = sum(i -> motorSlotPrice(i), 1:length(slots))
 	@objective(model, Min, objectiveFunction)
@@ -253,19 +258,19 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, fi
 		error("The model was not solved correctly.")
 	else
 		# Get the first solution and use it to find the other solutions.
-		solution = findOptimalChoices(Fml, motors)
+		solution = findOptimalChoices(Fm, motors, value.([link1, link2, link3]))
 
 		println("Found solution:")
-		printOptimizationResult!(model, solution)
-		saveOptimizationResult(model, solution, filename)
+		printOptimizationResult!(model, solution, value.([link1, link2, link3]))
+		saveOptimizationResult(model, solution, value.([link1, link2, link3]), filename)
 
-		return (model, objectiveFunction, solution, Fml)
+		return (model, objectiveFunction, solution, Fm, [link1, link2, link3])
 	end
 end
 
 makeGLPKModel()::Model = Model(with_optimizer(GLPK.Optimizer))
 
-function printOptimizationResult!(model, optimalMotors)
+function printOptimizationResult!(model, optimalMotors, links)
 	if termination_status(model) == MOI.TIME_LIMIT
 		println("-------------------------------------------------------")
 		println("-------------------SUBOPTIMAL RESULT-------------------")
@@ -274,13 +279,13 @@ function printOptimizationResult!(model, optimalMotors)
 
 	println("Optimal objective: ", objective_value(model))
 	println("Optimal motors:")
-	for (mtr, ratio, link1, link2, link3) in optimalMotors
-		println("\t", mtr, ", ratio=", ratio, ", link1=", link1,
-			", link2=", link2, ", link3=", link3)
+	for (mtr, ratio) in optimalMotors
+		println("\t", mtr, ", ratio=", ratio, ", link1=", links[1],
+			", link2=", links[2], ", link3=", links[3])
 	end
 end
 
-function saveOptimizationResult(model, solution, filename)
+function saveOptimizationResult(model, solution, links, filename)
 	open(filename, "a") do file
 		if termination_status(model) == MOI.TIME_LIMIT
 			write(file, "-------------------------------------------------------\n")
@@ -290,9 +295,9 @@ function saveOptimizationResult(model, solution, filename)
 
 		write(file, "Optimal objective: ", string(objective_value(model)), "\n")
 		write(file, "Optimal motors:\n")
-		for (mtr, ratio, link1, link2, link3) in solution
-			write(file, "\t", string(mtr), ", ratio=", string(ratio), ", link1=", string(link1),
-				", link2=", string(link2), ", link3=", string(link3), "\n")
+		for (mtr, ratio) in solution
+			write(file, "\t", string(mtr), ", ratio=", string(ratio), ", link1=", string(links[1]),
+				", link2=", string(links[2]), ", link3=", string(links[3]), "\n")
 		end
 	end
 end
@@ -376,11 +381,11 @@ function loadAndOptimzeAtParetoFrontier!(model::Model, constraintsFile::String,
 	limb, motors, gearRatios = loadProblem(constraintsFile, limbName, motorOptionsFile)
 
 	println("Optimizing initial model.")
-	model, objectiveFunction, solution, featureMatrix =
+	model, objectiveFunction, solution, featureMatrix, links =
 		buildAndOptimizeModel!(model, limb, motors, gearRatios, resultsFile)
 
 	println("Optimizing at Pareto frontier.")
-	solution = optimizeAtParetoFrontier(model, objectiveFunction, featureMatrix, motors, resultsFile)
+	solution = optimizeAtParetoFrontier(model, objectiveFunction, featureMatrix, links, motors, resultsFile)
 
 	return solution
 end

@@ -71,5 +71,5 @@ function parseLinks(config::Dict{String, Any})::Tuple{Vararg{Link}}
 end
 
 function parseDhParam(link::Dict{String, Any})::DhParam
-    return DhParam(link["dh-D"] / 1000, link["dh-Theta"], link["dh-A"] / 1000, link["dh-Alpha"])
+    return DhParam(link["dh-D"], link["dh-Theta"], link["dh-A"], link["dh-Alpha"])
 end

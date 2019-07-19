@@ -1,10 +1,10 @@
 Optimal objective: 38.849999999999994
 Optimal motors:
-	VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.09090909090909091, link1=0.05075, link2=0.001, link3=0.05075
-	VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.3333333333333333, link1=0.05075, link2=0.001, link3=0.05075
-	VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.3333333333333333, link1=0.05075, link2=0.001, link3=0.05075
-Optimal objective: 0.6000000000000001
+	VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.1111111111111111, link1=6.0, link2=132.0, link3=1.0
+	VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.1111111111111111, link1=6.0, link2=132.0, link3=1.0
+	VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=9.0, link1=6.0, link2=132.0, link3=1.0
+Optimal objective: 600.0
 Optimal motors:
-	VitaminOptimizer.Motor("hobbyServo-hv5932mg", 3.16754795, 10.5, 29.99, 0.059), ratio=0.2, link1=0.2, link2=0.2, link3=0.2
-	VitaminOptimizer.Motor("vexMotor-269", 1.53, 10.471, 15.0, 0.043), ratio=0.3333333333333333, link1=0.2, link2=0.2, link3=0.2
-	VitaminOptimizer.Motor("vexMotor-269", 1.53, 10.471, 15.0, 0.043), ratio=1.0, link1=0.2, link2=0.2, link3=0.2
+	VitaminOptimizer.Motor("hobbyServo-hv5932mg", 3.16754795, 10.5, 29.99, 0.059), ratio=0.3333333333333333, link1=200.0, link2=200.0, link3=200.0
+	VitaminOptimizer.Motor("stepperMotor-GenericNEMA17", 0.3108, 87.2665, 19.95, 0.365), ratio=0.05263157894736842, link1=200.0, link2=200.0, link3=200.0
+	VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.058823529411764705, link1=200.0, link2=200.0, link3=200.0
