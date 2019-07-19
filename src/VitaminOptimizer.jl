@@ -281,7 +281,7 @@ function saveOptimizationResult!(model, solution, filename)
 			write(file, "-------------------------------------------------------\n")
 		end
 
-		write(file, "Optimal objective: ", objective_value(model), "\n")
+		write(file, "Optimal objective: ", string(objective_value(model)), "\n")
 		write(file, "Optimal motors:\n")
 		for (mtr, ratio, link1, link2, link3) in solution
 			write(file, "\t", string(mtr), ", ratio=", ratio, ", link1=", link1,
@@ -301,7 +301,7 @@ function loadProblem(constraintsFile::String, limbName::String, motorOptionsFile
 	motors = parseMotorOptions!(motorOptionsFile)
 
 	# TODO: Put available gear ratios in the constraints file
-	ratios = collect(range(1, step=2, length=30))
+	ratios = collect(range(1, step=2, length=10))
 	gearRatios = Set(hcat(ratios, 1 ./ ratios))
 
 	return (limb, motors, gearRatios)
