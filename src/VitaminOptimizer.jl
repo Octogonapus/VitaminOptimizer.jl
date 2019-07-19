@@ -170,6 +170,7 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, fi
 	@variable(model, limb.minLinks[1].dhParam.r <= link1 <= limb.maxLinks[1].dhParam.r, Int)
 	@variable(model, limb.minLinks[2].dhParam.r <= link2 <= limb.maxLinks[2].dhParam.r, Int)
 	@variable(model, limb.minLinks[3].dhParam.r <= link3 <= limb.maxLinks[3].dhParam.r, Int)
+	@constraint(model, link1 + link2 + link3 == 400)
 
 	# @variable(model, limbSlot[1:numFlCols], Bin)
 	# limbSlots = [limbSlot]
