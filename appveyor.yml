@@ -7,6 +7,10 @@ environment:
 platform:
   - x64
 
+notifications:
+  - provider: Email
+    on_build_failure: false
+
 matrix:
   allow_failures:
     - julia_version: nightly
