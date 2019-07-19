@@ -119,7 +119,7 @@ function optimizeAtParetoFrontier(model::Model, objectiveFunction,
 	@slotFunc(featureMatrix, 9, limbSlotLink2)
 	@slotFunc(featureMatrix, 10, limbSlotLink3)
 
-	@objective(model, Max, limbSlotLink1() + limbSlotLink2() + limbSlotLink3())
+	@objective(model, Max, limbSlotLink1()*1000 + limbSlotLink2()*1000 + limbSlotLink3()*1000)
 
 	optimize!(model)
 
@@ -152,7 +152,7 @@ model to minimize price using the optimizer in the `model`.
 function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, filename::String)
 	limbConfig = limb.minLinks
 	numFmCols = length(motors) * length(gearRatios)
-	linkRangeLength = 5
+	linkRangeLength = 8
 	numFlCols = linkRangeLength^length(limb.maxLinks)
 
 	# @variable(model, motorSlot1[1:numFmCols], Bin)
@@ -216,6 +216,7 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, fi
 	@constraint(model, limbSlotLink2(1) == limbSlotLink2(3))
 	@constraint(model, limbSlotLink3(1) == limbSlotLink3(2))
 	@constraint(model, limbSlotLink3(1) == limbSlotLink3(3))
+	@constraint(model, limbSlotLink1() + limbSlotLink2() + limbSlotLink3() == 400 / 1000)
 
 	# Equation 3
 	@expression(model, τ1Required, limb.tipForce * (limbSlotLink1() + limbSlotLink2() + limbSlotLink3()) +
@@ -275,8 +276,8 @@ function printOptimizationResult!(model, optimalMotors)
 	println("Optimal objective: ", objective_value(model))
 	println("Optimal motors:")
 	for (mtr, ratio, link1, link2, link3) in optimalMotors
-		println("\t", mtr, ", ratio=", ratio, ", link1=", link1,
-			", link2=", link2, ", link3=", link3)
+		println("\t", mtr, ", ratio=", ratio, ", link1=", link1*1000,
+			", link2=", link2*1000, ", link3=", link3*1000)
 	end
 end
 
@@ -291,8 +292,8 @@ function saveOptimizationResult(model, solution, filename)
 		write(file, "Optimal objective: ", string(objective_value(model)), "\n")
 		write(file, "Optimal motors:\n")
 		for (mtr, ratio, link1, link2, link3) in solution
-			write(file, "\t", string(mtr), ", ratio=", string(ratio), ", link1=", string(link1),
-				", link2=", string(link2), ", link3=", string(link3), "\n")
+			write(file, "\t", string(mtr), ", ratio=", string(ratio), ", link1=", string(link1*1000),
+				", link2=", string(link2*1000), ", link3=", string(link3*1000), "\n")
 		end
 	end
 end
