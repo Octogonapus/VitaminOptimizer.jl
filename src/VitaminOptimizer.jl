@@ -106,11 +106,13 @@ function stayAtParetoFrontier(model::Model, objectiveFunction)
 end
 
 """
-	optimizeAtParetoFrontier(model::Model, objectiveFunction, featureMatrix::FeatureMatrix, motors, filename::String)
+	optimizeAtParetoFrontier(model::Model, objectiveFunction,
+		featureMatrix::FeatureMatrix, motors, filename::String)
 
 Further optimize the `model` at the Pareto frontier defined by the current objective value.
 """
-function optimizeAtParetoFrontier(model::Model, objectiveFunction, featureMatrix::FeatureMatrix, motors, filename::String)
+function optimizeAtParetoFrontier(model::Model, objectiveFunction,
+	featureMatrix::FeatureMatrix, motors, filename::String)
 	stayAtParetoFrontier(model, objectiveFunction)
 
 	@slotFunc(featureMatrix, 8, limbSlotLink1)
@@ -122,7 +124,8 @@ function optimizeAtParetoFrontier(model::Model, objectiveFunction, featureMatrix
 	optimize!(model)
 
 	if failedToOptimize(model)
-		error("Failed to opimize the model at the Pareto frontier. Ending with objective value: " * string(objective_value(model)))
+		error("Failed to opimize the model at the Pareto frontier. Ending with objective value: " *
+			string(objective_value(model)))
 	else
 		solution = findOptimalChoices(featureMatrix, motors)
 		printOptimizationResult!(model, solution)
@@ -312,7 +315,8 @@ function loadProblem(constraintsFile::String, limbName::String, motorOptionsFile
 end
 
 """
-	loadAndOptimize!(model::Model, constraintsFile::String, limbName::String, motorOptionsFile::String, resultsFile::String)
+	loadAndOptimize!(model::Model, constraintsFile::String, limbName::String,
+		motorOptionsFile::String, resultsFile::String)
 
 Load the constraints from `constraintsFile` and the motor options from
 `motorOptionsFile`. Select limb `limbName` from the constraints. Uses the
@@ -328,11 +332,13 @@ Optimal motors:
     VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.077
 ```
 """
-function loadAndOptimize!(model::Model, constraintsFile::String, limbName::String, motorOptionsFile::String, resultsFile::String)
+function loadAndOptimize!(model::Model, constraintsFile::String, limbName::String,
+		motorOptionsFile::String, resultsFile::String)
 	limb, motors, gearRatios = loadProblem(constraintsFile, limbName, motorOptionsFile)
 
 	println("Optimizing initial model.")
-	model, objectiveFunction, solution, featureMatrix = buildAndOptimizeModel!(model, limb, motors, gearRatios, resultsFile)
+	model, objectiveFunction, solution, featureMatrix =
+		buildAndOptimizeModel!(model, limb, motors, gearRatios, resultsFile)
 
 	println("Exploring Pareto frontier.")
 	stayAtParetoFrontier(model, objectiveFunction)
@@ -346,7 +352,8 @@ function loadAndOptimize!(model::Model, constraintsFile::String, limbName::Strin
 end
 
 """
-	loadAndOptimzeAtParetoFrontier!(model::Model, constraintsFile::String, limbName::String, motorOptionsFile::String, resultsFile::String)
+	loadAndOptimzeAtParetoFrontier!(model::Model, constraintsFile::String,
+		limbName::String, motorOptionsFile::String, resultsFile::String)
 
 Load the constraints from `constraintsFile` and the motor options from
 `motorOptionsFile`. Select limb `limbName` from the constraints. Uses the
@@ -364,11 +371,13 @@ Optimal motors:
     VitaminOptimizer.Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.111111
 ```
 """
-function loadAndOptimzeAtParetoFrontier!(model::Model, constraintsFile::String, limbName::String, motorOptionsFile::String, resultsFile::String)
+function loadAndOptimzeAtParetoFrontier!(model::Model, constraintsFile::String,
+	limbName::String, motorOptionsFile::String, resultsFile::String)
 	limb, motors, gearRatios = loadProblem(constraintsFile, limbName, motorOptionsFile)
 
 	println("Optimizing initial model.")
-	model, objectiveFunction, solution, featureMatrix = buildAndOptimizeModel!(model, limb, motors, gearRatios, resultsFile)
+	model, objectiveFunction, solution, featureMatrix =
+		buildAndOptimizeModel!(model, limb, motors, gearRatios, resultsFile)
 
 	println("Optimizing at Pareto frontier.")
 	solution = optimizeAtParetoFrontier(model, objectiveFunction, featureMatrix, motors, resultsFile)
