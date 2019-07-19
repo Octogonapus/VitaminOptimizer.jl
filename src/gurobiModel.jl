@@ -1,6 +1,6 @@
 using Gurobi, JuMP
 
-function makeGurobiModel!(maxNumSolutions::Int64)::Model
+function makeGurobiModel(maxNumSolutions::Int64)::Model
 	env = Gurobi.Env()
 	setparam!(env, "PoolSearchMode", 2)
 	setparam!(env, "PoolSolutions", maxNumSolutions)

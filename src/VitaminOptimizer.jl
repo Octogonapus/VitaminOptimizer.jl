@@ -12,16 +12,33 @@ const gravity = 9.80665
 """
 	optimalIndices(slots)
 
-Find the indices of the chosen values of `slots` (the indices where `slots[i] == 1`).
+Find the indices of the chosen values of `slots` (the indices where `slots[i] ≈ 1`).
 """
-optimalIndices(slots) = [findfirst(isequal(1), value.(slot)) for slot in slots]
+optimalIndices(slots) = [findfirst(x -> abs(x - 1) <= 1e-5, value.(slot)) for slot in slots]
 
 """
-	optimalColumns(featureMatrix, slots)
+	optimalColumns(featureMatrix::FeatureMatrix)
 
-Get the columns of the `featureMatrix` corresponding to the chosen values for the `slots`.
+Get the columns of the `featureMatrix` corresponding to the chosen values for the slots.
 """
-optimalColumns(featureMatrix, slots) = [featureMatrix[:, i] for i in optimalIndices(slots)]
+function optimalColumns(featureMatrix::FeatureMatrix)
+	indices = optimalIndices(featureMatrix.slots)
+
+	# Check if any indices are nothing because that will throw an exception later on
+	for (index, slot) in zip(indices, featureMatrix.slots)
+		if index == nothing
+			firstNonzero = findall(x -> x != 0, value.(slot))
+
+			for x in firstNonzero
+				println(string(value.(slot)[x]))
+			end
+
+			throw(ErrorException("`nothing` in indices. First nonzero index: " * string(firstNonzero)))
+		end
+	end
+
+	return [featureMatrix.matrix[:, i] for i in indices]
+end
 
 """
 	findMotorIndex(featureMatrixColumn, motors)
@@ -38,38 +55,42 @@ findMotorIndex(featureMatrixColumn, motors) = findfirst(
 	motors)
 
 """
-	findOptimalChoices(featureMatrix, allSlots, motors)
+	findOptimalChoices(featureMatrix, motors)
 
 Find the optimal motors, gear ratios, and link lengths.
 """
-findOptimalChoices(featureMatrix, allSlots, motors) =
+findOptimalChoices(featureMatrix::FeatureMatrix, motors) =
 	hcat([(motors[findMotorIndex(col, motors)], col[6], col[8], col[9], col[10])
-		for col in optimalColumns(featureMatrix, allSlots)]...)
+		for col in optimalColumns(featureMatrix)]...)
 
 """
-	exploreParetoFrontier(model::Model, optimalObjectiveValue, featureMatrix, allSlots, motors)
+	exploreParetoFrontier(model::Model, featureMatrix::FeatureMatrix, motors, filename::String)
 
 Iteratively optimize the `model` to find all solutions at a given `optimalObjectiveValue` by adding a
 constraint to disallow the most recent combination of slot values. Returns an array of all solutions.
 """
-function exploreParetoFrontier(model::Model, optimalObjectiveValue, featureMatrix, allSlots, motors)
+function exploreParetoFrontier(model::Model, featureMatrix::FeatureMatrix, motors, filename::String)
 	# Disallow the current solution by disallowing the combination of the current slot1, slot2, and slot3
 	# values.
-	@constraint(model, sum(x -> x[1][x[2]], zip(allSlots, optimalIndices(allSlots))) <= length(allSlots) - 1)
+	@constraint(
+		model,
+		sum(x -> x[1][x[2]], zip(featureMatrix.slots, optimalIndices(featureMatrix.slots)))
+			<= length(featureMatrix.slots) - 1)
 
 	# Optimize again to find a different solution.
 	optimize!(model)
 
 	# If we are no longer at the given optimum or if the model failed to opimize, stop.
-	if objective_value(model) != optimalObjectiveValue || failedToOptimize(model)
+	if failedToOptimize(model)
 		return []
 	else
 		# Record the current solution.
-		solution = findOptimalChoices(featureMatrix, allSlots, motors)
+		solution = findOptimalChoices(featureMatrix, motors)
 		printOptimizationResult!(model, solution)
+		saveOptimizationResult(model, solution, filename)
 
 		# Keep finding more solutions.
-		otherSolutions = exploreParetoFrontier(model, optimalObjectiveValue, featureMatrix, allSlots, motors)
+		otherSolutions = exploreParetoFrontier(model, featureMatrix, motors, filename)
 
 		# Add the current solution to the end of the other solutions.
 		if otherSolutions == []
@@ -80,28 +101,33 @@ function exploreParetoFrontier(model::Model, optimalObjectiveValue, featureMatri
 	end
 end
 
-"""
-	optimizeAtParetoFrontier(model::Model, optimalObjectiveValue, objectiveFunction, featureMatrix, allSlots, motors)
+function stayAtParetoFrontier(model::Model, objectiveFunction)
+	@constraint(model, objective_value(model) - objectiveFunction <= 1e-5)
+end
 
-Further optimize the `model` at the Pareto frontier defined by `optimalObjectiveValue`. This function
-is invalid for values of `optimalObjectiveValue` which are not actually optimal.
 """
-function optimizeAtParetoFrontier(model::Model, optimalObjectiveValue, objectiveFunction, featureMatrix, allSlots, motors)
-	# Force the model to stay at the Pareto frontier.
-	@constraint(model, objectiveFunction <= optimalObjectiveValue)
+	optimizeAtParetoFrontier(model::Model, objectiveFunction, featureMatrix::FeatureMatrix, motors, filename::String)
 
-	numRows, numCols = size(featureMatrix)
-	featureIdentity = Matrix{Float64}(I, numRows, numRows)
-	gearRatioRow = transpose(featureIdentity[6,:])
-	slotGearRatio(i) = gearRatioRow * featureMatrix * allSlots[i]
-	@objective(model, Max, sum(i -> slotGearRatio(i), 1:length(allSlots)))
+Further optimize the `model` at the Pareto frontier defined by the current objective value.
+"""
+function optimizeAtParetoFrontier(model::Model, objectiveFunction, featureMatrix::FeatureMatrix, motors, filename::String)
+	stayAtParetoFrontier(model, objectiveFunction)
+
+	@slotFunc(featureMatrix, 8, limbSlotLink1)
+	@slotFunc(featureMatrix, 9, limbSlotLink2)
+	@slotFunc(featureMatrix, 10, limbSlotLink3)
+
+	@objective(model, Max, limbSlotLink1() + limbSlotLink2() + limbSlotLink3())
 
 	optimize!(model)
 
 	if failedToOptimize(model)
-		error("Failed to opimize the model at the Pareto frontier.")
+		error("Failed to opimize the model at the Pareto frontier. Ending with objective value: " * string(objective_value(model)))
 	else
-		return findOptimalChoices(featureMatrix, allSlots, motors)
+		solution = findOptimalChoices(featureMatrix, motors)
+		printOptimizationResult!(model, solution)
+		saveOptimizationResult(model, solution, filename)
+		return solution
 	end
 end
 
@@ -112,30 +138,6 @@ Check if the `model` failed to optimize.
 """
 failedToOptimize(model) = !(termination_status(model) == MOI.OPTIMAL ||
 	(termination_status(model) == MOI.TIME_LIMIT && has_values(model)))
-
-"""
-	onlyOneSelection(model::Model, slot::Array{JuMP.GenericAffExpr{Float64,JuMP.VariableRef},1})
-
-Constrain the `model` to select only one variable from `slot`.
-"""
-onlyOneSelection(model::Model, slot::Array{JuMP.GenericAffExpr{Float64,JuMP.VariableRef},1}) =
-	@constraint(model, sum(slot) == 1)
-
-"""
-	onlyOneSelection(model::Model, slot::Array{JuMP.GenericAffExpr{Float64,JuMP.VariableRef},2})
-
-Constrain the `model` to select only one variable from `slot`.
-"""
-onlyOneSelection(model::Model, slot::Array{JuMP.GenericAffExpr{Float64,JuMP.VariableRef},2}) =
-	onlyOneSelection(model, vcat(slot...))
-
-"""
-	onlyOneSelection(model::Model, slot::Array{JuMP.VariableRef,1})
-
-Constrain the `model` to select only one variable from `slot`.
-"""
-onlyOneSelection(model::Model, slot::Array{JuMP.VariableRef,T}) where T =
-	@constraint(model, sum(slot) == 1)
 
 """
 	buildAndOptimizeModel!(model, limb, motors, gearRatios)
@@ -183,7 +185,7 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, fi
 	@variable(model, slot3[1:numFmCols * numFlCols], Bin)
 	slots = [slot1, slot2, slot3]
 	Fml = FeatureMatrix(constructMotorAndLinkFeatureMatrix(motors, gearRatios, limb, linkRangeLength), slots)
-	onlyOneSelection.(model, slots)
+
 	@slotFunc(Fml, 1, motorSlotτ)
 	@slotFunc(Fml, 2, motorSlotω)
 	@slotFunc(Fml, 3, motorSlotPrice)
@@ -201,6 +203,10 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, fi
 	@slotFunc(Fml, 15, limbSlotLnLink23)
 	@slotFunc(Fml, 16, massTimesLink1)
 	@slotFunc(Fml, 17, massTimesLink2)
+
+	@constraint(model, sum(slot1) == 1)
+	@constraint(model, sum(slot2) == 1)
+	@constraint(model, sum(slot3) == 1)
 	@constraint(model, limbSlotLink1(1) == limbSlotLink1(2))
 	@constraint(model, limbSlotLink1(1) == limbSlotLink1(3))
 	@constraint(model, limbSlotLink2(1) == limbSlotLink2(2))
@@ -244,19 +250,17 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, fi
 		error("The model was not solved correctly.")
 	else
 		# Get the first solution and use it to find the other solutions.
-		solution = findOptimalChoices(Fml.matrix, slots, motors)
+		solution = findOptimalChoices(Fml, motors)
 
 		println("Found solution:")
 		printOptimizationResult!(model, solution)
-		saveOptimizationResult!(model, solution, filename)
+		saveOptimizationResult(model, solution, filename)
 
-		return (model, objectiveFunction, solution, Fml.matrix, slots)
+		return (model, objectiveFunction, solution, Fml)
 	end
 end
 
-function makeGLPKModel()::Model
-	return Model(with_optimizer(GLPK.Optimizer))
-end
+makeGLPKModel()::Model = Model(with_optimizer(GLPK.Optimizer))
 
 function printOptimizationResult!(model, optimalMotors)
 	if termination_status(model) == MOI.TIME_LIMIT
@@ -273,7 +277,7 @@ function printOptimizationResult!(model, optimalMotors)
 	end
 end
 
-function saveOptimizationResult!(model, solution, filename)
+function saveOptimizationResult(model, solution, filename)
 	open(filename, "a") do file
 		if termination_status(model) == MOI.TIME_LIMIT
 			write(file, "-------------------------------------------------------\n")
@@ -284,8 +288,8 @@ function saveOptimizationResult!(model, solution, filename)
 		write(file, "Optimal objective: ", string(objective_value(model)), "\n")
 		write(file, "Optimal motors:\n")
 		for (mtr, ratio, link1, link2, link3) in solution
-			write(file, "\t", string(mtr), ", ratio=", ratio, ", link1=", link1,
-				", link2=", link2, ", link3=", link3, "\n")
+			write(file, "\t", string(mtr), ", ratio=", string(ratio), ", link1=", string(link1),
+				", link2=", string(link2), ", link3=", string(link3), "\n")
 		end
 	end
 end
@@ -328,13 +332,17 @@ function loadAndOptimize!(model::Model, constraintsFile::String, limbName::Strin
 	limb, motors, gearRatios = loadProblem(constraintsFile, limbName, motorOptionsFile)
 
 	println("Optimizing initial model.")
-	model, objectiveFunction, solution, featureMatrix, allSlots = buildAndOptimizeModel!(model, limb, motors, gearRatios, resultsFile)
+	model, objectiveFunction, solution, featureMatrix = buildAndOptimizeModel!(model, limb, motors, gearRatios, resultsFile)
 
 	println("Exploring Pareto frontier.")
-	otherSolutions = exploreParetoFrontier(model, objective_value(model), featureMatrix, allSlots, motors)
+	stayAtParetoFrontier(model, objectiveFunction)
+	otherSolutions = exploreParetoFrontier(model, featureMatrix, motors, resultsFile)
 
-	printOptimizationResult!(model, solution)
-	return vcat(solution, otherSolutions)
+	if (isempty(otherSolutions))
+		return vcat(solution)
+	else
+		return vcat(solution, otherSolutions)
+	end
 end
 
 """
@@ -360,25 +368,20 @@ function loadAndOptimzeAtParetoFrontier!(model::Model, constraintsFile::String, 
 	limb, motors, gearRatios = loadProblem(constraintsFile, limbName, motorOptionsFile)
 
 	println("Optimizing initial model.")
-	model, objectiveFunction, solution, featureMatrix, allSlots = buildAndOptimizeModel!(model, limb, motors, gearRatios, resultsFile)
+	model, objectiveFunction, solution, featureMatrix = buildAndOptimizeModel!(model, limb, motors, gearRatios, resultsFile)
 
 	println("Optimizing at Pareto frontier.")
-	solution =  optimizeAtParetoFrontier(model, objective_value(model), objectiveFunction, featureMatrix, allSlots, motors)
+	solution = optimizeAtParetoFrontier(model, objectiveFunction, featureMatrix, motors, resultsFile)
 
-	printOptimizationResult!(model, solution)
 	return solution
 end
 
+export loadProblem
+export buildAndOptimizeModel!
 export loadAndOptimize!
 export loadAndOptimzeAtParetoFrontier!
 export makeGLPKModel
 export printOptimizationResult!
-
-# loadAndOptimize!(
-# 	makeGLPKModel(),
-# 	"res/constraints1.json",
-# 	"HephaestusArmLimbOne",
-# 	"res/motorOptions.json"
-# )
+export saveOptimizationResult
 
 end # module VitaminOptimizer
