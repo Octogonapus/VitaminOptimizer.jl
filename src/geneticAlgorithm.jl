@@ -3,6 +3,7 @@ include("parseMotorOptions.jl")
 include("featureMatrix.jl")
 
 import LinearAlgebra, Distributed
+using Plots, Statistics
 
 const gravity = 9.80665
 
@@ -47,7 +48,7 @@ Required functions:
 	- GAShouldStop(population, generationNumber)
 """
 function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
-	mutationProb::Float64, nElite::Int64, nCross::Int64)::Vector{Entity}
+	mutationProb::Float64, nElite::Int64, nCross::Int64)
 	popNum = length(initialPopulation)
 	nMut = popNum - nElite - nCross
 	population = initialPopulation
@@ -56,10 +57,14 @@ function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
 	@assert nMut >= 0
 	@assert 0 <= mutationProb <= 1
 
+	avgFitness::Array{Float64, 1} = []
+
 	generationNumber = 0
 	while !GAShouldStop(population, generationNumber)
 		# Step 2
 		fitness = map(GAFitness, population)
+		push!(avgFitness, mean(fitness))
+
 		constraintValues = LinearAlgebra.normalize!(map(
 			entity -> map(constraint -> constraint(entity), constraints),
 			population))
@@ -113,7 +118,7 @@ function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
 		generationNumber += 1
 	end
 
-	return population
+	return population, avgFitness
 end
 
 global (limb, motors, gearRatios) = loadProblem(
@@ -148,8 +153,10 @@ function GAMutate(entity::Entity, mutationProb::Float64)::Entity
 	)
 end
 
+const maxNumGenerations = 50000
+
 function GAShouldStop(population::Vector{Entity}, generationNumber::Int64)::Bool
-	return generationNumber > 200000
+	return generationNumber > maxNumGenerations
 end
 
 function makeRandomEntity()
@@ -183,7 +190,7 @@ function makeConstraints()
 		entity::Entity -> abs(entity.link1Length + entity.link2Length + entity.link3Length - 0.4) - 1e-4]
 end
 
-global finalPopulation = geneticAlgorithm(
+global (finalPopulation, avgFitness) = geneticAlgorithm(
 	map(x -> makeRandomEntity(), 1:100),
 	makeConstraints(),
 	0.05,
@@ -210,3 +217,6 @@ if max(bestConstraintValues...) <= 0
 else
 	println("Not feasible.")
 end
+
+plot(1:(maxNumGenerations+1), avgFitness, title="Average Fitness per Generation",
+	label=["Average Fitness"], xlabel="Generation Number")
