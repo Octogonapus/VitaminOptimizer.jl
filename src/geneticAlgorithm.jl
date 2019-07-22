@@ -36,6 +36,10 @@ struct Entity
 end
 
 """
+This implements the algorithm described in:
+	Chehouri, A., Younes, R., Perron, J., & Ilinca, A. (2016). A constraint-handling technique
+	for genetic algorithms using a violation factor. arXiv preprint arXiv:1610.00976.
+
 Required functions:
 	- GAFitness(entity)
 	- GACrossover(entity1, entity2)
