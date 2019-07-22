@@ -181,8 +181,8 @@ global finalPopulation = geneticAlgorithm(
 	map(x -> makeRandomEntity(), 1:100),
 	makeConstraints(),
 	0.05,
-	5,
-	90)
+	1,
+	94)
 
 global bestEntity = finalPopulation[argmax(map(GAFitness, finalPopulation))]
 println("Motor 1=", motors[bestEntity.motor1Index],
@@ -194,6 +194,8 @@ println("Motor 1=", motors[bestEntity.motor1Index],
 	"\nGear ratio 1=", bestEntity.gearRatio1,
 	"\nGear ratio 2=", bestEntity.gearRatio2,
 	"\nGear ratio 3=", bestEntity.gearRatio3)
+
+println("Fitness=", GAFitness(bestEntity))
 
 global bestConstraintValues = map(x -> x(bestEntity), makeConstraints())
 println("Constraint values: ", bestConstraintValues)
