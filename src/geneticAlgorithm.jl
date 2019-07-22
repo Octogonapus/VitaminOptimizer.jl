@@ -21,90 +21,109 @@ function loadProblem(constraintsFile::String, limbName::String, motorOptionsFile
 	return (limb, motors, gearRatios)
 end
 
+struct Entity
+	motorIndex::Int64
+	link1Length::Int64
+	link2Length::Int64
+	link3Length::Int64
+end
+
 """
 Required functions:
 	- GAFitness(entity)
-	- GAIsFeasible(entity)
 	- GACrossover(entity1, entity2)
 	- GAMutate(entity)
+	- GAShouldStop(population)
 """
-function geneticAlgorithm(initialPopulation, constraints, crossoverProb::Float64, mutationProb::Float64, Nelite::Int64, Ncross::Int64)
-	PopNum = length(initialPopulation)
-	Nmut = PopNum - Nelite - Ncross
+function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
+	crossoverProb::Float64, mutationProb::Float64, nElite::Int64, nCross::Int64)::Vector{Entity}
+	popNum = length(initialPopulation)
+	nMut = popNum - nElite - nCross
 	population = initialPopulation
 
-	# Step 2
-	fitness = map(GAFitness, population)
-	constraintValues = map(x -> x[0](x[1]), zip(constraints, population))
+	while !GAShouldStop(population)
+		# Step 2
+		fitness = map(GAFitness, population)
+		constraintValues = map(x -> x[0](x[1]), zip(constraints, population))
 
-	# Equation 13
-	constraintViolationValues = sum(x -> max(0, x), constraintValues)
+		# Equation 13
+		constraintViolationValues = sum(x -> max(0, x), constraintValues)
 
-	# Equation 14
-	numberOfViolations = sum(x -> x > 0, constraintValues) / length(constraints)
+		# Equation 14
+		numberOfViolations = sum(x -> x > 0, constraintValues) / length(constraints)
 
-	function customLessThan(entity1, entity2)
-		entity1Index = findfirst(isequal(entity1), population)
-		entity2Index = findfirst(isequal(entity2), population)
-		entity1Feasible = GAIsFeasible(entity1)
-		entity2Feasible = GAIsFeasible(entity2)
+		function customLessThan(entity1, entity2)
+			entity1Index = findfirst(isequal(entity1), population)
+			entity2Index = findfirst(isequal(entity2), population)
+			entity1Feasible = numberOfViolations[entity1Index] == 0
+			entity2Feasible = numberOfViolations[entity2Index] == 0
 
-		if entity1Feasible && entity2Feasible
-			# Winner is the one with the highest fitness value
-			if fitness[entity1Index] > fitness[entity2Index]
-				return entity1
+			if entity1Feasible && entity2Feasible
+				# Winner is the one with the highest fitness value
+				if fitness[entity1Index] > fitness[entity2Index]
+					return entity1
+				else
+					return entity2
+				end
+			end
+
+			if xor(entity1Feasible, entity2Feasible)
+				# Winner is the feasible one
+				if entity1Feasible
+					return entity1
+				else
+					return entity2
+				end
+			end
+
+			# Both are infeasible
+			if numberOfViolations[entity1Index] == numberOfViolations[entity2Index]
+				# Winner is the one with the lowest CV
+				if constraintViolationValues[entity1Index] < constraintViolationValues[entity2Index]
+					return entity1
+				else
+					return entity2
+				end
 			else
-				return entity2
+				# Winner is the one with the lowest NV
+				if numberOfViolations[entity1Index] < numberOfViolations[entity2Index]
+					return entity1
+				else
+					return entity2
+				end
 			end
 		end
 
-		if xor(entity1Feasible, entity2Feasible)
-			# Winner is the feasible one
-			if entity1Feasible
-				return entity1
-			else
-				return entity2
-			end
-		end
+		# Step 3
+		sortedPopulation = sort(population, lt=customLessThan)
 
-		# Both are infeasible
-		if numberOfViolations[entity1Index] == numberOfViolations[entity2Index]
-			# Winner is the one with the lowest CV
-			if constraintViolationValues[entity1Index] < constraintViolationValues[entity2Index]
-				return entity1
-			else
-				return entity2
-			end
-		else
-			# Winner is the one with the lowest NV
-			if numberOfViolations[entity1Index] < numberOfViolations[entity2Index]
-				return entity1
-			else
-				return entity2
-			end
-		end
+		# Step 4
+		elites = sortedPopulation[1:nElite]
+
+		# Step 5
+		crossed = map(GACrossover(rand(elites), rand(elites)), 1:nCross)
+		mutated = map(GAMutate(rand(elites)), 1:nMut)
+		population = vcat(elites, crossed, mutated)
 	end
 
-	# Step 3
-	sortedPopulation = sort(population, lt=customLessThan)
-
-	# Step 4
-	elites = sortedPopulation[1:Nelite]
-
-	# Step 5
-	crossed = map(GACrossover(rand(elites), rand(elites)), 1:Ncross)
-	mutated = map(GAMutate(rand(elites)), 1:Nmut)
-	population = vcat(elites, crossed, mutated)
+	return population
 end
 
-function GAFitness(entity)
+limb, motors, gearRatios = loadProblem(
+	"../res/constraints2.json",
+	"HephaestusArmLimbOne",
+	"../res/motorOptions.json")
+
+function GAFitness(entity::Entity)::Float64
+	# Use negative of price because we maximize fitness
+	return -1 * motors[entity.motorIndex].price
 end
 
-function GAIsFeasible(entity)
+function GACrossover(entity1::Entity, entity2::Entity)::Entity
 end
 
-function GACrossover(entity1, entity2)
+function GAMutate(entity::Entity)::Entity
 end
 
-function GAMutate(entity)
+function GAShouldStop(population::Vector{Entity})::Bool
 end
