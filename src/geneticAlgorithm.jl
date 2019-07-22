@@ -147,7 +147,19 @@ function makeRandomEntity()
 end
 
 function makeConstraints()
-	return [entity::Entity -> limb.tipForce * entity.link3Length - motors[entity.motor3Index].τStall]
+	return [entity::Entity -> limb.tipForce * (entity.link1Length + entity.link2Length + entity.link3Length) +
+				gravity * (motors[entity.motor2Index].mass * entity.link1Length +
+				motors[entity.motor3Index].mass * (entity.link1Length + entity.link2Length)) -
+				motors[entity.motor1Index].τStall,
+		entity::Entity -> limb.tipForce * (entity.link2Length + entity.link3Length) +
+				motors[entity.motor3Index].mass * gravity * entity.link2Length -
+				motors[entity.motor2Index].τStall,
+		entity::Entity -> limb.tipForce * entity.link3Length - motors[entity.motor3Index].τStall,
+		entity::Entity -> limb.tipVelocity / (entity.link1Length + entity.link2Length + entity.link3Length) -
+				motors[entity.motor1Index].ωFree,
+		entity::Entity -> limb.tipVelocity / (entity.link2Length + entity.link3Length) -
+				motors[entity.motor2Index].ωFree,
+		entity::Entity -> limb.tipVelocity / entity.link3Length - motors[entity.motor3Index].ωFree]
 end
 
 global finalPopulation = geneticAlgorithm(
