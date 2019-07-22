@@ -32,7 +32,7 @@ end
 Required functions:
 	- GAFitness(entity)
 	- GACrossover(entity1, entity2)
-	- GAMutate(entity)
+	- GAMutate(entity, mutationProb)
 	- GAShouldStop(population)
 """
 function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
@@ -107,7 +107,7 @@ function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
 
 		# Step 5
 		crossed = map(_ -> if (rand(1:100) > crossoverProb) GACrossover(rand(elites), rand(elites)) else rand(elites), 1:nCross)
-		mutated = map(_ -> if (rand(1:100) > mutationProb) GAMutate(rand(elites)) else rand(elites), 1:nMut)
+		mutated = map(GAMutate(rand(elites), mutationProb), 1:nMut)
 		population = vcat(elites, crossed, mutated)
 	end
 
@@ -129,7 +129,7 @@ function GACrossover(entity1::Entity, entity2::Entity)::Entity
 	return Entity(entity1.motorIndex, entity2.link1Length, entity2.link2Length, entity2.link3Length)
 end
 
-function GAMutate(entity::Entity)::Entity
+function GAMutate(entity::Entity, mutationProb::Int64)::Entity
 end
 
 function GAShouldStop(population::Vector{Entity})::Bool
