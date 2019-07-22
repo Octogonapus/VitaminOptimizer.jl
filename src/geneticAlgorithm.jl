@@ -145,13 +145,13 @@ function GAMutate(entity::Entity, mutationProb::Float64)::Entity
 end
 
 function GAShouldStop(population::Vector{Entity}, generationNumber::Int64)::Bool
-	return generationNumber > 100000
+	return generationNumber > 200000
 end
 
 function makeRandomEntity()
-	# return GAMutate(Entity(0, 0, 0, 0, 0, 0), 1.0)
-	mtrIndex = findfirst(x -> x.name == "stepperMotor-GenericNEMA14", motors)
-	return Entity(mtrIndex, mtrIndex, mtrIndex, 150, 150, 150, 0.05263157894736842, 0.05263157894736842, 0.05263157894736842)
+	return GAMutate(Entity(0, 0, 0, 0, 0, 0, 0, 0, 0), 1.0)
+	# mtrIndex = findfirst(x -> x.name == "stepperMotor-GenericNEMA14", motors)
+	# return Entity(mtrIndex, mtrIndex, mtrIndex, 150, 150, 150, 0.05263157894736842, 0.05263157894736842, 0.05263157894736842)
 end
 
 function makeConstraints()
@@ -174,7 +174,9 @@ function makeConstraints()
 				motors[entity.motor2Index].ωFree * entity.gearRatio2,
 
 		entity::Entity -> (limb.tipVelocity / entity.link3Length) -
-				motors[entity.motor3Index].ωFree * entity.gearRatio3]
+				motors[entity.motor3Index].ωFree * entity.gearRatio3,
+
+		entity::Entity -> abs(entity.link1Length + entity.link2Length + entity.link3Length - 0.4) - 1e-4]
 end
 
 global finalPopulation = geneticAlgorithm(
