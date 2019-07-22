@@ -36,10 +36,15 @@ Required functions:
 	- GAShouldStop(population)
 """
 function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
-	crossoverProb::Float64, mutationProb::Float64, nElite::Int64, nCross::Int64)::Vector{Entity}
+	crossoverProb::Int64, mutationProb::Int64, nElite::Int64, nCross::Int64)::Vector{Entity}
 	popNum = length(initialPopulation)
 	nMut = popNum - nElite - nCross
 	population = initialPopulation
+
+	@assert popNum > 0
+	@assert nMut >= 0
+	@assert 0 >= crossoverProb <= 100
+	@assert 0 >= mutationProb <= 100
 
 	while !GAShouldStop(population)
 		# Step 2
@@ -101,8 +106,8 @@ function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
 		elites = sortedPopulation[1:nElite]
 
 		# Step 5
-		crossed = map(GACrossover(rand(elites), rand(elites)), 1:nCross)
-		mutated = map(GAMutate(rand(elites)), 1:nMut)
+		crossed = map(_ -> if (rand(1:100) > crossoverProb) GACrossover(rand(elites), rand(elites)) else rand(elites), 1:nCross)
+		mutated = map(_ -> if (rand(1:100) > mutationProb) GAMutate(rand(elites)) else rand(elites), 1:nMut)
 		population = vcat(elites, crossed, mutated)
 	end
 
@@ -120,6 +125,8 @@ function GAFitness(entity::Entity)::Float64
 end
 
 function GACrossover(entity1::Entity, entity2::Entity)::Entity
+	# Take the motors from entity1 and the links from entity2
+	return Entity(entity1.motorIndex, entity2.link1Length, entity2.link2Length, entity2.link3Length)
 end
 
 function GAMutate(entity::Entity)::Entity
