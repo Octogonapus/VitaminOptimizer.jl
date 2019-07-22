@@ -43,19 +43,25 @@ function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
 
 	@assert popNum > 0
 	@assert nMut >= 0
-	@assert 0 >= crossoverProb <= 100
-	@assert 0 >= mutationProb <= 100
+	@assert 0 <= crossoverProb <= 100
+	@assert 0 <= mutationProb <= 100
 
 	while !GAShouldStop(population)
 		# Step 2
 		fitness = map(GAFitness, population)
-		constraintValues = map(x -> x[0](x[1]), zip(constraints, population))
+		constraintValues = map(
+			entity -> map(constraint -> constraint(entity), constraints),
+			population)
 
 		# Equation 13
-		constraintViolationValues = sum(x -> max(0, x), constraintValues)
+		constraintViolationValues = map(
+			valueList -> sum(x -> max(0, x), valueList),
+			constraintValues)
 
 		# Equation 14
-		numberOfViolations = sum(x -> x > 0, constraintValues) / length(constraints)
+		numberOfViolations = map(
+			valueList -> sum(x -> x > 0, valueList) / length(constraints),
+			constraintValues)
 
 		function customLessThan(entity1, entity2)
 			entity1Index = findfirst(isequal(entity1), population)
@@ -106,18 +112,18 @@ function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
 		elites = sortedPopulation[1:nElite]
 
 		# Step 5
-		crossed = map(_ -> if (rand(1:100) > crossoverProb) GACrossover(rand(elites), rand(elites)) else rand(elites), 1:nCross)
-		mutated = map(GAMutate(rand(elites), mutationProb), 1:nMut)
+		crossed = map(_ -> if (rand(1:100) <= crossoverProb) GACrossover(rand(elites), rand(elites)) else rand(elites) end, 1:nCross)
+		mutated = map(_ -> GAMutate(rand(elites), mutationProb), 1:nMut)
 		population = vcat(elites, crossed, mutated)
 	end
 
 	return population
 end
 
-limb, motors, gearRatios = loadProblem(
-	"../res/constraints2.json",
+global (limb, motors, gearRatios) = loadProblem(
+	"res/constraints2.json",
 	"HephaestusArmLimbOne",
-	"../res/motorOptions.json")
+	"res/motorOptions.json")
 
 function GAFitness(entity::Entity)::Float64
 	# Use negative of price because we maximize fitness
@@ -130,7 +136,32 @@ function GACrossover(entity1::Entity, entity2::Entity)::Entity
 end
 
 function GAMutate(entity::Entity, mutationProb::Int64)::Entity
+	return Entity(
+		if (rand(1:100) <= mutationProb) rand(1:length(motors)) else entity.motorIndex end,
+		if (rand(1:100) <= mutationProb) rand(limb.minLinks[1].dhParam.r:limb.maxLinks[1].dhParam.r) else entity.link1Length end,
+		if (rand(1:100) <= mutationProb) rand(limb.minLinks[2].dhParam.r:limb.maxLinks[2].dhParam.r) else entity.link2Length end,
+		if (rand(1:100) <= mutationProb) rand(limb.minLinks[3].dhParam.r:limb.maxLinks[3].dhParam.r) else entity.link3Length end
+	)
 end
 
+global generationNumber = 0
 function GAShouldStop(population::Vector{Entity})::Bool
+	global generationNumber += 1
+	return generationNumber > 100
 end
+
+function makeRandomEntity()
+	return GAMutate(Entity(0, 0, 0, 0), 100)
+end
+
+function makeConstraints()
+	return []
+end
+
+geneticAlgorithm(
+	map(x -> makeRandomEntity(), 1:10),
+	makeConstraints(),
+	40,
+	5,
+	2,
+	3)

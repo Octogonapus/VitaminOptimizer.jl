@@ -49,7 +49,7 @@ function constructMotorFeatureMatrix(motors, gearRatios)
     ]...)
 end
 
-function constructLinkFeatureMatrix(limb::VitaminOptimizer.Limb, rangeLength::Int64)
+function constructLinkFeatureMatrix(limb::Limb, rangeLength::Int64)
     return hcat([[
     link1
     link2
@@ -65,7 +65,7 @@ function constructLinkFeatureMatrix(limb::VitaminOptimizer.Limb, rangeLength::In
     ]...)
 end
 
-function constructMotorAndLinkFeatureMatrix(motors, gearRatios, limb::VitaminOptimizer.Limb, rangeLength::Int64)
+function constructMotorAndLinkFeatureMatrix(motors, gearRatios, limb::Limb, rangeLength::Int64)
     return hcat([[
     motor.τStall / ratio
     motor.ωFree * ratio
