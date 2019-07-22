@@ -2,6 +2,8 @@ include("parseConstraints.jl")
 include("parseMotorOptions.jl")
 include("featureMatrix.jl")
 
+import LinearAlgebra
+
 const gravity = 9.80665
 
 """
@@ -22,7 +24,9 @@ function loadProblem(constraintsFile::String, limbName::String, motorOptionsFile
 end
 
 struct Entity
-	motorIndex::Int64
+	motor1Index::Int64
+	motor2Index::Int64
+	motor3Index::Int64
 	link1Length::Int64
 	link2Length::Int64
 	link3Length::Int64
@@ -49,9 +53,9 @@ function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
 	while !GAShouldStop(population)
 		# Step 2
 		fitness = map(GAFitness, population)
-		constraintValues = map(
+		constraintValues = LinearAlgebra.normalize!(map(
 			entity -> map(constraint -> constraint(entity), constraints),
-			population)
+			population))
 
 		# Equation 13
 		constraintViolationValues = map(
@@ -63,7 +67,7 @@ function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
 			valueList -> sum(x -> x > 0, valueList) / length(constraints),
 			constraintValues)
 
-		function customLessThan(entity1, entity2)
+		function customLessThan(entity1::Entity, entity2::Entity)::Bool
 			entity1Index = findfirst(isequal(entity1), population)
 			entity2Index = findfirst(isequal(entity2), population)
 			entity1Feasible = numberOfViolations[entity1Index] == 0
@@ -71,37 +75,21 @@ function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
 
 			if entity1Feasible && entity2Feasible
 				# Winner is the one with the highest fitness value
-				if fitness[entity1Index] > fitness[entity2Index]
-					return entity1
-				else
-					return entity2
-				end
+				return fitness[entity1Index] > fitness[entity2Index]
 			end
 
 			if xor(entity1Feasible, entity2Feasible)
 				# Winner is the feasible one
-				if entity1Feasible
-					return entity1
-				else
-					return entity2
-				end
+				return entity1Feasible
 			end
 
 			# Both are infeasible
 			if numberOfViolations[entity1Index] == numberOfViolations[entity2Index]
 				# Winner is the one with the lowest CV
-				if constraintViolationValues[entity1Index] < constraintViolationValues[entity2Index]
-					return entity1
-				else
-					return entity2
-				end
+				return constraintViolationValues[entity1Index] < constraintViolationValues[entity2Index]
 			else
 				# Winner is the one with the lowest NV
-				if numberOfViolations[entity1Index] < numberOfViolations[entity2Index]
-					return entity1
-				else
-					return entity2
-				end
+				return numberOfViolations[entity1Index] < numberOfViolations[entity2Index]
 			end
 		end
 
@@ -127,17 +115,21 @@ global (limb, motors, gearRatios) = loadProblem(
 
 function GAFitness(entity::Entity)::Float64
 	# Use negative of price because we maximize fitness
-	return -1 * motors[entity.motorIndex].price
+	return -1 * (motors[entity.motor1Index].price + motors[entity.motor2Index].price +
+		motors[entity.motor3Index].price)
 end
 
 function GACrossover(entity1::Entity, entity2::Entity)::Entity
 	# Take the motors from entity1 and the links from entity2
-	return Entity(entity1.motorIndex, entity2.link1Length, entity2.link2Length, entity2.link3Length)
+	return Entity(entity1.motor1Index, entity1.motor2Index, entity1.motor3Index,
+		entity2.link1Length, entity2.link2Length, entity2.link3Length)
 end
 
 function GAMutate(entity::Entity, mutationProb::Int64)::Entity
 	return Entity(
-		if (rand(1:100) <= mutationProb) rand(1:length(motors)) else entity.motorIndex end,
+		if (rand(1:100) <= mutationProb) rand(1:length(motors)) else entity.motor1Index end,
+		if (rand(1:100) <= mutationProb) rand(1:length(motors)) else entity.motor2Index end,
+		if (rand(1:100) <= mutationProb) rand(1:length(motors)) else entity.motor3Index end,
 		if (rand(1:100) <= mutationProb) rand(limb.minLinks[1].dhParam.r:limb.maxLinks[1].dhParam.r) else entity.link1Length end,
 		if (rand(1:100) <= mutationProb) rand(limb.minLinks[2].dhParam.r:limb.maxLinks[2].dhParam.r) else entity.link2Length end,
 		if (rand(1:100) <= mutationProb) rand(limb.minLinks[3].dhParam.r:limb.maxLinks[3].dhParam.r) else entity.link3Length end
@@ -151,17 +143,19 @@ function GAShouldStop(population::Vector{Entity})::Bool
 end
 
 function makeRandomEntity()
-	return GAMutate(Entity(0, 0, 0, 0), 100)
+	return GAMutate(Entity(0, 0, 0, 0, 0, 0), 100)
 end
 
 function makeConstraints()
-	return []
+	return [entity::Entity -> limb.tipForce * entity.link3Length - motors[entity.motor3Index].τStall]
 end
 
-geneticAlgorithm(
+global finalPopulation = geneticAlgorithm(
 	map(x -> makeRandomEntity(), 1:10),
 	makeConstraints(),
 	40,
 	5,
 	2,
 	3)
+
+println(finalPopulation)
