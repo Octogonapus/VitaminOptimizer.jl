@@ -34,20 +34,20 @@ struct Limb
     tipForce::Float64    # Units N
 end
 
-function parseConstraints!(fileName::String, limbNames::Array{String, 1})::Array{Limb, 1}
-    return parseConstraints(JSON.parsefile(fileName), limbNames)
+function parseConstraints!(fileName::String, limbNames::Array{String, 1}, linearConversion::Float64)::Array{Limb, 1}
+    return parseConstraints(JSON.parsefile(fileName), limbNames, linearConversion)
 end
 
-function parseConstraints(json::Dict{String, Any}, limbNames::Array{String, 1})::Array{Limb, 1}
-    return [parseLimb(json, name) for name in limbNames]
+function parseConstraints(json::Dict{String, Any}, limbNames::Array{String, 1}, linearConversion::Float64)::Array{Limb, 1}
+    return [parseLimb(json, name, linearConversion) for name in limbNames]
 end
 
-function parseLimb(json::Dict{String, Any}, limbName::String)
+function parseLimb(json::Dict{String, Any}, limbName::String, linearConversion::Float64)
     tipVelocity = json["requiredTipVelocityMeterPerSec"]
     tipForce = json["requiredTipForceNewtons"]
     limb = json[limbName]
 
-    (maxConfig, minConfig) = parseLimbConfig(limb)
+    (maxConfig, minConfig) = parseLimbConfig(limb, linearConversion)
     @assert length(maxConfig) == length(minConfig)
 
     return Limb(
@@ -59,17 +59,17 @@ function parseLimb(json::Dict{String, Any}, limbName::String)
     )
 end
 
-function parseLimbConfig(limb::Dict{String, Any})
-    minConfig = parseLinks(limb["min"])
-    maxConfig = parseLinks(limb["max"])
+function parseLimbConfig(limb::Dict{String, Any}, linearConversion::Float64)
+    minConfig = parseLinks(limb["min"], linearConversion)
+    maxConfig = parseLinks(limb["max"], linearConversion)
     return (maxConfig, minConfig)
 end
 
-function parseLinks(config::Dict{String, Any})::Tuple{Vararg{Link}}
+function parseLinks(config::Dict{String, Any}, linearConversion::Float64)::Tuple{Vararg{Link}}
     links = sort(collect(values(config)), by=x -> x["index"])
-    return tuple(map(x -> Link(parseDhParam(x)), links)...)
+    return tuple(map(x -> Link(parseDhParam(x, linearConversion)), links)...)
 end
 
-function parseDhParam(link::Dict{String, Any})::DhParam
-    return DhParam(link["dh-D"], link["dh-Theta"], link["dh-A"], link["dh-Alpha"])
+function parseDhParam(link::Dict{String, Any}, linearConversion::Float64)::DhParam
+    return DhParam(link["dh-D"]/linearConversion, link["dh-Theta"], link["dh-A"]/linearConversion, link["dh-Alpha"])
 end
