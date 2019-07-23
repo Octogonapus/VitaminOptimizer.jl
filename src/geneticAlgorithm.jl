@@ -206,6 +206,6 @@ else
 	println("Not feasible.")
 end
 
-plot(1:(maxNumGenerations+1), avgFitness, title="Average Fitness per Generation",
+avgFitnessPerGen = plot(1:(maxNumGenerations+1), avgFitness, title="Average Fitness per Generation",
 	label=["Average Fitness"], xlabel="Generation Number")
-savefig("average_fitness_per_generation.png")
+savefig(avgFitnessPerGen, "average_fitness_per_generation.png")
