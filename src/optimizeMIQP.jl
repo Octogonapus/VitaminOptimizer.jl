@@ -1,5 +1,3 @@
-module VitaminOptimizer
-
 import JSON, GLPK
 using JuMP, LinearAlgebra
 
@@ -115,11 +113,7 @@ function optimizeAtParetoFrontier(model::Model, objectiveFunction,
 	featureMatrix::FeatureMatrix, links, motors, filename::String)
 	stayAtParetoFrontier(model, objectiveFunction)
 
-	@slotFunc(featureMatrix, 8, limbSlotLink1)
-	@slotFunc(featureMatrix, 9, limbSlotLink2)
-	@slotFunc(featureMatrix, 10, limbSlotLink3)
-
-	@objective(model, Max, limbSlotLink1()*1000 + limbSlotLink2()*1000 + limbSlotLink3()*1000)
+	@objective(model, Max, sum(links))
 
 	optimize!(model)
 
@@ -175,55 +169,6 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, fi
 	@variable(model, limb.minLinks[2].dhParam.r <= link2 <= limb.maxLinks[2].dhParam.r, Int)
 	@variable(model, limb.minLinks[3].dhParam.r <= link3 <= limb.maxLinks[3].dhParam.r, Int)
 	@constraint(model, link1 + link2 + link3 == 400)
-
-	# @variable(model, limbSlot[1:numFlCols], Bin)
-	# limbSlots = [limbSlot]
-	# onlyOneSelection.(model, limbSlots)
-	# Fl = FeatureMatrix(constructLinkFeatureMatrix(limb, linkRangeLength), limbSlots)
-	# onlyOneSelection.(model, limbSlots)
-	# @slotFunc(Fl, 1, limbSlotLink1)
-	# @slotFunc(Fl, 2, limbSlotLink2)
-	# @slotFunc(Fl, 3, limbSlotLink3)
-	# @slotFunc(Fl, 4, limbSlotLnLink1)
-	# @slotFunc(Fl, 5, limbSlotLnLink2)
-	# @slotFunc(Fl, 6, limbSlotLnLink3)
-	# @slotFunc(Fl, 7, limbSlotLnLink123)
-	# @slotFunc(Fl, 8, limbSlotLnLink23)
-
-	@variable(model, slot1[1:numFmCols * numFlCols], Bin)
-	@variable(model, slot2[1:numFmCols * numFlCols], Bin)
-	@variable(model, slot3[1:numFmCols * numFlCols], Bin)
-	slots = [slot1, slot2, slot3]
-	Fml = FeatureMatrix(constructMotorAndLinkFeatureMatrix(motors, gearRatios, limb, linkRangeLength), slots)
-
-	@slotFunc(Fml, 1, motorSlotτ)
-	@slotFunc(Fml, 2, motorSlotω)
-	@slotFunc(Fml, 3, motorSlotPrice)
-	@slotFunc(Fml, 4, motorSlotMass)
-	@slotFunc(Fml, 5, motorSlotOmegaFunc)
-	@slotFunc(Fml, 6, motorSlotGearRatio)
-	@slotFunc(Fml, 7, motorSlotLnω)
-	@slotFunc(Fml, 8, limbSlotLink1)
-	@slotFunc(Fml, 9, limbSlotLink2)
-	@slotFunc(Fml, 10, limbSlotLink3)
-	@slotFunc(Fml, 11, limbSlotLnLink1)
-	@slotFunc(Fml, 12, limbSlotLnLink2)
-	@slotFunc(Fml, 13, limbSlotLnLink3)
-	@slotFunc(Fml, 14, limbSlotLnLink123)
-	@slotFunc(Fml, 15, limbSlotLnLink23)
-	@slotFunc(Fml, 16, massTimesLink1)
-	@slotFunc(Fml, 17, massTimesLink2)
-
-	@constraint(model, sum(slot1) == 1)
-	@constraint(model, sum(slot2) == 1)
-	@constraint(model, sum(slot3) == 1)
-	@constraint(model, limbSlotLink1(1) == limbSlotLink1(2))
-	@constraint(model, limbSlotLink1(1) == limbSlotLink1(3))
-	@constraint(model, limbSlotLink2(1) == limbSlotLink2(2))
-	@constraint(model, limbSlotLink2(1) == limbSlotLink2(3))
-	@constraint(model, limbSlotLink3(1) == limbSlotLink3(2))
-	@constraint(model, limbSlotLink3(1) == limbSlotLink3(3))
-	@constraint(model, limbSlotLink1() + limbSlotLink2() + limbSlotLink3() == 400 / 1000)
 
 	# Equation 3
 	@expression(model, τ1Required, limb.tipForce * (link1 / 1000 + link2 / 1000 + link3 / 1000) +
@@ -286,9 +231,9 @@ function printOptimizationResult!(model, optimalMotors, links)
 
 	println("Optimal objective: ", objective_value(model))
 	println("Optimal motors:")
-	for (mtr, ratio, link1, link2, link3) in optimalMotors
-		println("\t", mtr, ", ratio=", ratio, ", link1=", link1*1000,
-			", link2=", link2*1000, ", link3=", link3*1000)
+	for (mtr, ratio) in optimalMotors
+		println("\t", mtr, ", ratio=", ratio, ", link1=", links[1],
+			", link2=", links[2], ", link3=", links[3])
 	end
 end
 
@@ -302,9 +247,9 @@ function saveOptimizationResult(model, solution, links, filename)
 
 		write(file, "Optimal objective: ", string(objective_value(model)), "\n")
 		write(file, "Optimal motors:\n")
-		for (mtr, ratio, link1, link2, link3) in solution
-			write(file, "\t", string(mtr), ", ratio=", string(ratio), ", link1=", string(link1*1000),
-				", link2=", string(link2*1000), ", link3=", string(link3*1000), "\n")
+		for (mtr, ratio) in solution
+			write(file, "\t", string(mtr), ", ratio=", string(ratio), ", link1=", string(links[1]),
+				", link2=", string(links[2]), ", link3=", string(links[3]), "\n")
 		end
 	end
 end
@@ -405,4 +350,11 @@ export makeGLPKModel
 export printOptimizationResult!
 export saveOptimizationResult
 
-end # module VitaminOptimizer
+fullyOptimalSolution = loadAndOptimzeAtParetoFrontier!(
+    #makeGLPKModel(),
+    makeGurobiModel(1),
+    "../res/constraints2.json",
+    "HephaestusArmLimbOne",
+    "../res/motorOptions.json",
+    "optimizationTestResults_miqp_loadAndOptimzeAtParetoFrontier.txt"
+)
