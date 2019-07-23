@@ -31,9 +31,11 @@ Required functions:
 	- GAShouldStop(population, generationNumber)
 """
 function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
-	mutationProb::Float64, nElite::Int64, nCross::Int64)
-	popNum = length(initialPopulation)
-	nMut = popNum - nElite - nCross
+	mutationProb::Float64, eliteRatio::Float64, crossRatio::Float64)
+	popNum::Int64 = length(initialPopulation)
+	nElite::Int64 = round(popNum * eliteRatio)
+	nCross::Int64 = round(popNum * crossRatio)
+	nMut::Int64 = popNum - nElite - nCross
 	population = initialPopulation
 
 	@assert popNum > 0
@@ -62,7 +64,7 @@ function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
 			valueList -> sum(x -> x > 0, valueList) / length(constraints),
 			constraintValues)
 
-		function customLessThan(entity1::Entity, entity2::Entity)::Bool
+		function entityLessThan(entity1::Entity, entity2::Entity)::Bool
 			entity1Index = findfirst(isequal(entity1), population)
 			entity2Index = findfirst(isequal(entity2), population)
 			entity1Feasible = numberOfViolations[entity1Index] == 0
@@ -89,7 +91,7 @@ function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
 		end
 
 		# Step 3
-		sortedPopulation = sort(population, lt=customLessThan)
+		sortedPopulation = sort(population, lt=entityLessThan)
 
 		# Step 4
 		elites = sortedPopulation[1:nElite]
@@ -100,7 +102,7 @@ function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
 		population = vcat(elites, crossed, mutated)
 		generationNumber += 1
 
-		if generationNumber % 10000 == 0
+		if generationNumber % 1000 == 0
 			println("Generation ", generationNumber)
 		end
 	end
@@ -141,7 +143,7 @@ function GAMutate(entity::Entity, mutationProb::Float64)::Entity
 	)
 end
 
-const maxNumGenerations = 100000
+const maxNumGenerations = 50000
 
 function GAShouldStop(population::Vector{Entity}, generationNumber::Int64)::Bool
 	return generationNumber > maxNumGenerations
@@ -180,8 +182,8 @@ global (finalPopulation, avgFitness) = geneticAlgorithm(
 	map(x -> makeRandomEntity(), 1:100),
 	makeConstraints(),
 	0.05,
-	1,
-	94)
+	0.25,
+	1 - 0.25 - 0.05)
 
 global bestEntity = finalPopulation[argmax(map(GAFitness, finalPopulation))]
 println("Motor 1=", motors[bestEntity.motor1Index],
