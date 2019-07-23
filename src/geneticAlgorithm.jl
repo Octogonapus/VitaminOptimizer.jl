@@ -1,28 +1,11 @@
 include("parseConstraints.jl")
 include("parseMotorOptions.jl")
-include("featureMatrix.jl")
+include("problemUtil.jl")
 
-import LinearAlgebra, Distributed
+import LinearAlgebra
 using Plots, Statistics
 
 const gravity = 9.80665
-
-"""
-	loadProblem(constraintsFile::String, limbName::String, motorOptionsFile::String)
-
-Load the constraints from `constraintsFile` and the motor options from
-`motorOptionsFile`. Select limb `limbName` from the constraints.
-"""
-function loadProblem(constraintsFile::String, limbName::String, motorOptionsFile::String)
-	limb = parseConstraints!(constraintsFile, [limbName])[1]
-	motors = parseMotorOptions!(motorOptionsFile)
-
-	# TODO: Put available gear ratios in the constraints file
-	ratios = collect(range(1, step=2, length=10))
-	gearRatios = Set(hcat(ratios, 1 ./ ratios))
-
-	return (limb, motors, gearRatios)
-end
 
 struct Entity
 	motor1Index::Int64
@@ -116,6 +99,10 @@ function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
 		mutated = map(_ -> GAMutate(rand(elites), mutationProb), 1:nMut)
 		population = vcat(elites, crossed, mutated)
 		generationNumber += 1
+
+		if generationNumber % 10000 == 0
+			println("Generation ", generationNumber)
+		end
 	end
 
 	return population, avgFitness
@@ -124,7 +111,8 @@ end
 global (limb, motors, gearRatios) = loadProblem(
 	"res/constraints2.json",
 	"HephaestusArmLimbOne",
-	"res/motorOptions.json")
+	"res/motorOptions.json",
+	1.0)
 
 function GAFitness(entity::Entity)::Float64
 	# Use negative of price because we maximize fitness
@@ -153,16 +141,10 @@ function GAMutate(entity::Entity, mutationProb::Float64)::Entity
 	)
 end
 
-const maxNumGenerations = 50000
+const maxNumGenerations = 100000
 
 function GAShouldStop(population::Vector{Entity}, generationNumber::Int64)::Bool
 	return generationNumber > maxNumGenerations
-end
-
-function makeRandomEntity()
-	return GAMutate(Entity(0, 0, 0, 0, 0, 0, 0, 0, 0), 1.0)
-	# mtrIndex = findfirst(x -> x.name == "stepperMotor-GenericNEMA14", motors)
-	# return Entity(mtrIndex, mtrIndex, mtrIndex, 150, 150, 150, 0.05263157894736842, 0.05263157894736842, 0.05263157894736842)
 end
 
 function makeConstraints()
@@ -188,6 +170,10 @@ function makeConstraints()
 				motors[entity.motor3Index].ωFree * entity.gearRatio3,
 
 		entity::Entity -> abs(entity.link1Length + entity.link2Length + entity.link3Length - 0.4) - 1e-4]
+end
+
+function makeRandomEntity()
+	return GAMutate(Entity(0, 0, 0, 0, 0, 0, 0, 0, 0), 1.0)
 end
 
 global (finalPopulation, avgFitness) = geneticAlgorithm(
