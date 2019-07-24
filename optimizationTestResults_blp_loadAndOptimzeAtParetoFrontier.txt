@@ -38,3 +38,13 @@ Optimal motors:
 	Motor("vexMotor-393", 1.637, 10.471, 14.99, 0.0945), ratio=0.3333333333333333, link1=75.0, link2=125.0, link3=200.0
 	Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.05263157894736842, link1=75.0, link2=125.0, link3=200.0
 	Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.06666666666666667, link1=75.0, link2=125.0, link3=200.0
+Optimal objective: 40.89
+Optimal motors:
+	Motor("vexMotor-393", 1.637, 10.471, 14.99, 0.0945), ratio=0.3333333333333333, link1=75.0, link2=125.0, link3=200.0
+	Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.05263157894736842, link1=75.0, link2=125.0, link3=200.0
+	Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.06666666666666667, link1=75.0, link2=125.0, link3=200.0
+Optimal objective: 400.0
+Optimal motors:
+	Motor("vexMotor-393", 1.637, 10.471, 14.99, 0.0945), ratio=0.3333333333333333, link1=75.0, link2=125.0, link3=200.0
+	Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.05263157894736842, link1=75.0, link2=125.0, link3=200.0
+	Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.06666666666666667, link1=75.0, link2=125.0, link3=200.0

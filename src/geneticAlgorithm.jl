@@ -143,7 +143,7 @@ function GAMutate(entity::Entity, mutationProb::Float64)::Entity
 	)
 end
 
-const maxNumGenerations = 50000
+const maxNumGenerations = 70000
 
 function GAShouldStop(population::Vector{Entity}, generationNumber::Int64)::Bool
 	return generationNumber > maxNumGenerations
