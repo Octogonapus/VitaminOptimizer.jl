@@ -11,13 +11,13 @@ Optimal motors:
 
 # MIQP
 
-Solve time: `0.02` seconds.
+Solve time: `0.03` seconds.
 ```
 Optimal objective: 40.89
 Optimal motors:
-    Motor("vexMotor-393", 1.637, 10.471, 14.99, 0.0945), ratio=0.3333333333333333, link1=69.0, link2=194.0, link3=137.0
-    Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.05263157894736842, link1=69.0, link2=194.0, link3=137.0
-    Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.05263157894736842, link1=69.0, link2=194.0, link3=137.0
+    Motor("vexMotor-393", 1.637, 10.471, 14.99, 0.0945), ratio=0.3333333333333333, link1=68.0, link2=195.0, link3=137.0
+    Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.05263157894736842, link1=68.0, link2=195.0, link3=137.0
+    Motor("stepperMotor-GenericNEMA14", 0.098, 139.626, 12.95, 0.12), ratio=0.05263157894736842, link1=68.0, link2=195.0, link3=137.0
 ```
 
 # GA

@@ -85,7 +85,7 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, fi
 	# Equation 2
 	@expression(model, τ1Required, limb.tipForce * (link1 / 1000 + link2 / 1000 + link3 / 1000) +
 								   gravity * (motorSlotMass(2) * link1 / 1000 +
-								   motorSlotMass(3) * (link1 / 1000) + motorSlotMass(3) * (link3 / 1000)))
+								   motorSlotMass(3) * (link1 / 1000) + motorSlotMass(3) * (link2 / 1000)))
 	@constraint(model, eq3, motorSlotτ(1) .>= τ1Required)
 
 	# Equation 3
