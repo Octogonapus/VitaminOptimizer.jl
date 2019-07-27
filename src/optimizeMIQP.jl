@@ -78,37 +78,33 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, fi
 	@variable(model, limb.minLinks[1].dhParam.r <= link1 <= limb.maxLinks[1].dhParam.r, Int)
 	@variable(model, limb.minLinks[2].dhParam.r <= link2 <= limb.maxLinks[2].dhParam.r, Int)
 	@variable(model, limb.minLinks[3].dhParam.r <= link3 <= limb.maxLinks[3].dhParam.r, Int)
+
+    # Equation 8
 	@constraint(model, link1 + link2 + link3 == 400)
 
-	# Equation 3
+	# Equation 2
 	@expression(model, τ1Required, limb.tipForce * (link1 / 1000 + link2 / 1000 + link3 / 1000) +
 								   gravity * (motorSlotMass(2) * link1 / 1000 +
 								   motorSlotMass(3) * (link1 / 1000) + motorSlotMass(3) * (link3 / 1000)))
 	@constraint(model, eq3, motorSlotτ(1) .>= τ1Required)
 
-	# Equation 4
+	# Equation 3
 	@expression(model, τ2Required, limb.tipForce * (link2 / 1000 + link3 / 1000) +
 								   gravity * motorSlotMass(3) * (link2 / 1000))
 	@constraint(model, eq4, motorSlotτ(2) .>= τ2Required)
 
-	# Equation 5
+	# Equation 4
 	@expression(model, τ3Required, limb.tipForce * (link3 / 1000))
 	@constraint(model, eq5, motorSlotτ(3) .>= τ3Required)
 
-	# Equation 6
+	# Equation 5
 	@constraint(model, eq6, motorSlotω(1) * (link1 / 1000 + link2 / 1000 + link3 / 1000) .>= limb.tipVelocity)
-	# @expression(model, ω1Required, log(limb.tipVelocity) - limbSlotLnLink123())
-	# @constraint(model, eq6, motorSlotLnω(1) .>= ω1Required)
+
+	# Equation 6
+	@constraint(model, eq7, motorSlotω(2) * (link2 / 1000 + link3 / 1000) .>= limb.tipVelocity)
 
 	# Equation 7
-	@constraint(model, eq7, motorSlotω(2) * (link2 / 1000 + link3 / 1000) .>= limb.tipVelocity)
-	# @expression(model, ω2Required, log(limb.tipVelocity) - limbSlotLnLink23())
-	# @constraint(model, eq7, motorSlotLnω(2) .>= ω2Required)
-
-	# Equation 8
 	@constraint(model, eq8, motorSlotω(3) * (link3 / 1000) .>= limb.tipVelocity)
-	# @expression(model, ω3Required, log(limb.tipVelocity) - limbSlotLnLink3())
-	# @constraint(model, eq8, motorSlotLnω(3) .>= ω3Required)
 
 	objectiveFunction = sum(i -> motorSlotPrice(i), 1:length(slots))
 	@objective(model, Min, objectiveFunction)

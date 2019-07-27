@@ -95,31 +95,33 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, fi
 	@constraint(model, limbSlotLink2(1) == limbSlotLink2(3))
 	@constraint(model, limbSlotLink3(1) == limbSlotLink3(2))
 	@constraint(model, limbSlotLink3(1) == limbSlotLink3(3))
+
+	# Equation 8
 	@constraint(model, limbSlotLink1() + limbSlotLink2() + limbSlotLink3() == 400 / 1000)
 
-	# Equation 3
+	# Equation 2
 	@expression(model, τ1Required, limb.tipForce * (limbSlotLink1() + limbSlotLink2() + limbSlotLink3()) +
 								   gravity * (massTimesLink1(2) + massTimesLink1(3) + massTimesLink2(3)))
 	@constraint(model, eq3, motorSlotτ(1) .>= τ1Required)
 
-	# Equation 4
+	# Equation 3
 	@expression(model, τ2Required, limb.tipForce * (limbSlotLink2() + limbSlotLink3()) +
 								   gravity * massTimesLink2(3))
 	@constraint(model, eq4, motorSlotτ(2) .>= τ2Required)
 
-	# Equation 5
+	# Equation 4
 	@expression(model, τ3Required, limb.tipForce * limbSlotLink3())
 	@constraint(model, eq5, motorSlotτ(3) .>= τ3Required)
 
-	# Equation 6
+	# Equation 5
 	@expression(model, ω1Required, log(limb.tipVelocity) - limbSlotLnLink123())
 	@constraint(model, eq6, motorSlotLnω(1) .>= ω1Required)
 
-	# Equation 7
+	# Equation 6
 	@expression(model, ω2Required, log(limb.tipVelocity) - limbSlotLnLink23())
 	@constraint(model, eq7, motorSlotLnω(2) .>= ω2Required)
 
-	# Equation 8
+	# Equation 7
 	@expression(model, ω3Required, log(limb.tipVelocity) - limbSlotLnLink3())
 	@constraint(model, eq8, motorSlotLnω(3) .>= ω3Required)
 
