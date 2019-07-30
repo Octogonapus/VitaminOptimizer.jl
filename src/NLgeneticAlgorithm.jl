@@ -143,8 +143,6 @@ function GAMutate(entity::Entity, mutationProb::Float64)::Entity
 	)
 end
 
-const maxNumGenerations = 70000
-
 function GAShouldStop(population::Vector{Entity}, generationNumber::Int64)::Bool
 	return generationNumber > maxNumGenerations
 end
@@ -187,7 +185,11 @@ function makeNLForceConstaint(entity::Entity)::Float64
 		return 1.0
 	end
 
-	θ1 = asin((entity.link1Length * sin(θ3)) / h)
+	θ1asinArg = (entity.link1Length * sin(θ3)) / h
+	if abs(θ1asinArg) > 1
+		return 1.0
+	end
+	θ1 = asin(θ1asinArg)
 
 	βacosArg = (-h^2 + entity.link2Length^2 + entity.link3Length^2) / (2 * entity.link2Length * entity.link3Length)
 	if abs(βacosArg) > 1
@@ -195,7 +197,12 @@ function makeNLForceConstaint(entity::Entity)::Float64
 	end
 	β = acos(βacosArg)
 
-	θ4 = asin((entity.link2Length * sin(β)) / h)
+	θ4asinArg = (entity.link2Length * sin(β)) / h
+	if abs(θ4asinArg) > 1
+		return 1.0
+	end
+	θ4 = asin(θ4asinArg)
+
 	α = (π - β - θ4) + (π - θ1 - θ3)
 	J = [0 (entity.link3Length * cos(α + β) - entity.link2Length * sin(α)) (entity.link3Length * cos(α + β));
 	     (entity.link1Length + entity.link3Length * sin(α + β) + entity.link2Length * cos(α)) 0 0;
@@ -218,6 +225,28 @@ function makeRandomEntity()
 	return GAMutate(Entity(0, 0, 0, 0, 0, 0, 0, 0, 0), 1.0)
 end
 
+function isFeasible(entity::Entity)
+	constraintValues = map(x -> x(entity), makeConstraints())
+	return maximum(constraintValues) <= 0
+end
+
+function Base.show(io::IO, entity::Entity)
+	println(io,
+		"Motor 1=", motors[entity.motor1Index],
+		"\nMotor 2=", motors[entity.motor2Index],
+		"\nMotor 3=", motors[entity.motor3Index],
+		"\nLink 1=", entity.link1Length * 1000,
+		"\nLink 2=", entity.link2Length * 1000,
+		"\nLink 3=", entity.link3Length * 1000,
+		"\nGear ratio 1=", entity.gearRatio1,
+		"\nGear ratio 2=", entity.gearRatio2,
+		"\nGear ratio 3=", entity.gearRatio3,
+		"\nFitness=", GAFitness(entity),
+		"\nConstraint values=", map(x -> x(entity), makeConstraints()),
+		"\nFeasible=", isFeasible(entity))
+end
+
+const global maxNumGenerations = 50000
 global (finalPopulation, avgFitness) = geneticAlgorithm(
 	map(x -> makeRandomEntity(), 1:100),
 	makeConstraints(),
@@ -225,25 +254,11 @@ global (finalPopulation, avgFitness) = geneticAlgorithm(
 	0.25,
 	1 - 0.25 - 0.05)
 
-global bestEntity = finalPopulation[argmax(map(GAFitness, finalPopulation))]
-println("Motor 1=", motors[bestEntity.motor1Index],
-	"\nMotor 2=", motors[bestEntity.motor2Index],
-	"\nMotor 3=", motors[bestEntity.motor3Index],
-	"\nLink 1=", bestEntity.link1Length * 1000,
-	"\nLink 2=", bestEntity.link2Length * 1000,
-	"\nLink 3=", bestEntity.link3Length * 1000,
-	"\nGear ratio 1=", bestEntity.gearRatio1,
-	"\nGear ratio 2=", bestEntity.gearRatio2,
-	"\nGear ratio 3=", bestEntity.gearRatio3)
+global bestFitness = maximum(map(x -> GAFitness(x), finalPopulation))
+global bestEntities = Set(filter(x -> GAFitness(x) ≈ bestFitness && isFeasible(x), finalPopulation))
 
-println("Fitness=", GAFitness(bestEntity))
-
-global bestConstraintValues = map(x -> x(bestEntity), makeConstraints())
-println("Constraint values: ", bestConstraintValues)
-if max(bestConstraintValues...) <= 0
-	println("Feasible.")
-else
-	println("Not feasible.")
+for x::Entity in bestEntities
+	println(x)
 end
 
 avgFitnessPerGen = plot(1:(maxNumGenerations+1), avgFitness, title="Average Fitness per Generation",
