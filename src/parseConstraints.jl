@@ -58,8 +58,8 @@ function parseLimb(json::Dict{String, Any}, limbName::String, linearConversion::
         minConfig,
         tipVelocity,
         tipForce,
-        0.01,
-        0.01
+        0.05,
+        0.05
     )
 end
 

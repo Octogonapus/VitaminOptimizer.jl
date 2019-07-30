@@ -111,7 +111,7 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, fi
 	# Equation 7
 	@NLconstraint(model, eq8, motorSlotω(3) * (link3 / 1000) >= limb.tipVelocity)
 
-	@NLexpression(model, θ3, π/2 - atan(limb.targetZ / limb.targetX))
+	@NLexpression(model, θ3, π/2 - atan(limb.targetZ, limb.targetX))
 	@NLexpression(model, h, sqrt(limb.targetX^2 + ((link1/1000)-limb.targetZ)^2))
 	@NLexpression(model, θ1, asin(((link1/1000)*sin(θ3))/h))
 	@NLexpression(model, β, acos((-h^2-(link2/1000)^2-(link3/1000)^2) / (2*(link2/1000)*(link3/1000))))
