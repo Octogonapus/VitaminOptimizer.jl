@@ -3,7 +3,7 @@ include("parseMotorOptions.jl")
 include("problemUtil.jl")
 
 import LinearAlgebra
-using Plots, Statistics
+using Plots, Statistics, Distributed
 
 const gravity = 9.80665
 
@@ -194,8 +194,8 @@ function makeConstraints()
 end
 
 function makeNLForceConstaint(entity::Entity)::Float64
-	θ3 = π/2 - atan(limb.targetZ, limb.targetX)
-	h = sqrt(limb.targetX^2 + (limb.targetZ - entity.link1Length)^2)
+	θ3 = π/2 - atan(limb.targetZ/1000, limb.targetX/1000)
+	h = sqrt((limb.targetX/1000)^2 + ((limb.targetZ/1000) - entity.link1Length)^2)
 
 	if h > entity.link2Length + entity.link3Length
 		return 1.0
@@ -223,7 +223,7 @@ function makeNLForceConstaint(entity::Entity)::Float64
 	J = [0 (entity.link3Length * cos(α + β) - entity.link2Length * sin(α)) (entity.link3Length * cos(α + β));
 	     (entity.link1Length + entity.link3Length * sin(α + β) + entity.link2Length * cos(α)) 0 0;
 		 0 (-entity.link3Length * sin(α + β) - entity.link2Length * cos(α)) (-entity.link3Length * sin(α + β))]
-	jointTorques = transpose(J) * [0, 0, limb.tipForce]
+	jointTorques = transpose(J) * [0, 0, limb.tipForceClosePos]
 
 	# println(limb.tipForce)
 	# println(entity.link1Length)
@@ -246,7 +246,7 @@ function isFeasible(entity::Entity)
 	return maximum(constraintValues) <= 0
 end
 
-const global maxNumGenerations = 70000
+const global maxNumGenerations = 150000
 
 global (finalPopulation, avgFitness) = geneticAlgorithm(
 	map(x -> makeRandomEntity(), 1:100),
@@ -261,12 +261,15 @@ for x::Entity in finalPopulation
 end
 
 global feasibleEntities = filter(x -> isFeasible(x), finalPopulation)
-global bestFitness = maximum(map(x -> GAFitness(x), feasibleEntities))
-global bestEntities = Set(filter(x -> GAFitness(x) ≈ bestFitness, feasibleEntities))
 
-println("Best entities:")
-for x::Entity in bestEntities
-	println(x)
+if !isempty(feasibleEntities)
+	global bestFitness = maximum(map(x -> GAFitness(x), feasibleEntities))
+	global bestEntities = Set(filter(x -> GAFitness(x) ≈ bestFitness, feasibleEntities))
+
+	println("Best entities:")
+	for x::Entity in bestEntities
+		println(x)
+	end
 end
 
 avgFitnessPerGen = plot(1:(maxNumGenerations+1), avgFitness, title="Average Fitness per Generation",

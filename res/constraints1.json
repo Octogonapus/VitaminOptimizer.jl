@@ -1,6 +1,9 @@
 {
  "requiredTipVelocityMeterPerSec":1.0,
  "requiredTipForceNewtons":4.90332,
+ "requiredTipForceAtClosePosNewtons":7.35498,
+ "closePosX":100.0,
+ "closePosZ":50.0,
  "maximumPrice":120.0,
  "gearRatio":2.3333,
  "HephaestusArmLimbOne": {

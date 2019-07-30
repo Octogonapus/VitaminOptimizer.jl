@@ -6,12 +6,6 @@
       "MaxFreeSpeedRadPerSec": 10.5,
       "massKg": 0.059
     },
-    "stepperMotor-GenericNEMA14": {
-      "MaxTorqueNewtonmeters": 0.098,
-      "price": 12.95,
-      "MaxFreeSpeedRadPerSec": 139.626,
-      "massKg": 0.12
-    },
     "stepperMotor-GenericNEMA17": {
       "MaxTorqueNewtonmeters": 0.3108,
       "price": 19.95,
@@ -24,12 +18,6 @@
       "MaxFreeSpeedRadPerSec": 20.943,
       "massKg": 0.203
     },
-    "hobbyServo-standardMicro": {
-      "MaxTorqueNewtonmeters": 0.343,
-      "price": 9.49,
-      "MaxFreeSpeedRadPerSec": 9.52,
-      "massKg": 0.0138
-    },
     "stepperMotor-GenericNEMA11": {
       "MaxTorqueNewtonmeters": 0.0586,
       "price": 15.95,
@@ -41,12 +29,6 @@
       "price": 9.49,
       "MaxFreeSpeedRadPerSec": 9.52,
       "massKg": 0.0138
-    },
-    "hobbyServo-standard": {
-      "MaxTorqueNewtonmeters": 1.4317709,
-      "price": 19.99,
-      "MaxFreeSpeedRadPerSec": 6.54,
-      "massKg": 0.0694
     },
     "vexMotor-269": {
       "MaxTorqueNewtonmeters": 1.53,
@@ -87,8 +69,6 @@
   },
   "motors": {
     "hobbyServo": [
-      "standardMicro",
-      "standard",
       "hv6214mg",
       "DHV56mg_sub_Micro",
       "towerProMG91",
@@ -104,7 +84,6 @@
     ],
     "stepperMotor": [
       "GenericNEMA11",
-      "GenericNEMA14",
       "GenericNEMA17",
       "Pololu35x26"
     ]

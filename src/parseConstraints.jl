@@ -32,8 +32,9 @@ struct Limb
     minLinks::Tuple{Vararg{Link}}
     tipVelocity::Float64 # Units m/s
     tipForce::Float64    # Units N
-    targetX::Float64     # Units m
-    targetZ::Float64     # Units m
+    tipForceClosePos::Float64 # Units N
+    targetX::Float64 # Units m
+    targetZ::Float64 # Units m
 end
 
 function parseConstraints!(fileName::String, limbNames::Array{String, 1}, linearConversion::Float64)::Array{Limb, 1}
@@ -47,6 +48,7 @@ end
 function parseLimb(json::Dict{String, Any}, limbName::String, linearConversion::Float64)
     tipVelocity = json["requiredTipVelocityMeterPerSec"]
     tipForce = json["requiredTipForceNewtons"]
+    tipForceClosePos = json["requiredTipForceAtClosePosNewtons"]
     limb = json[limbName]
 
     (maxConfig, minConfig) = parseLimbConfig(limb, linearConversion)
@@ -58,8 +60,9 @@ function parseLimb(json::Dict{String, Any}, limbName::String, linearConversion::
         minConfig,
         tipVelocity,
         tipForce,
-        0.05,
-        0.05
+        tipForceClosePos,
+        json["closePosX"]/linearConversion,
+        json["closePosZ"]/linearConversion
     )
 end
 
