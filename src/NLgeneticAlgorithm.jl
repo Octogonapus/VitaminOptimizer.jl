@@ -19,6 +19,22 @@ struct Entity
 	gearRatio3::Float64
 end
 
+function Base.show(io::IO, entity::Entity)
+	println(io,
+		"Motor 1=", motors[entity.motor1Index],
+		"\nMotor 2=", motors[entity.motor2Index],
+		"\nMotor 3=", motors[entity.motor3Index],
+		"\nLink 1=", entity.link1Length * 1000,
+		"\nLink 2=", entity.link2Length * 1000,
+		"\nLink 3=", entity.link3Length * 1000,
+		"\nGear ratio 1=", entity.gearRatio1,
+		"\nGear ratio 2=", entity.gearRatio2,
+		"\nGear ratio 3=", entity.gearRatio3,
+		"\nFitness=", GAFitness(entity),
+		"\nConstraint values=", map(x -> x(entity), makeConstraints()),
+		"\nFeasible=", isFeasible(entity))
+end
+
 """
 This implements the algorithm described in:
 	Chehouri, A., Younes, R., Perron, J., & Ilinca, A. (2016). A constraint-handling technique
@@ -230,23 +246,8 @@ function isFeasible(entity::Entity)
 	return maximum(constraintValues) <= 0
 end
 
-function Base.show(io::IO, entity::Entity)
-	println(io,
-		"Motor 1=", motors[entity.motor1Index],
-		"\nMotor 2=", motors[entity.motor2Index],
-		"\nMotor 3=", motors[entity.motor3Index],
-		"\nLink 1=", entity.link1Length * 1000,
-		"\nLink 2=", entity.link2Length * 1000,
-		"\nLink 3=", entity.link3Length * 1000,
-		"\nGear ratio 1=", entity.gearRatio1,
-		"\nGear ratio 2=", entity.gearRatio2,
-		"\nGear ratio 3=", entity.gearRatio3,
-		"\nFitness=", GAFitness(entity),
-		"\nConstraint values=", map(x -> x(entity), makeConstraints()),
-		"\nFeasible=", isFeasible(entity))
-end
+const global maxNumGenerations = 70000
 
-const global maxNumGenerations = 50000
 global (finalPopulation, avgFitness) = geneticAlgorithm(
 	map(x -> makeRandomEntity(), 1:100),
 	makeConstraints(),
@@ -254,9 +255,16 @@ global (finalPopulation, avgFitness) = geneticAlgorithm(
 	0.25,
 	1 - 0.25 - 0.05)
 
-global bestFitness = maximum(map(x -> GAFitness(x), finalPopulation))
-global bestEntities = Set(filter(x -> GAFitness(x) ≈ bestFitness && isFeasible(x), finalPopulation))
+println("Final population:")
+for x::Entity in finalPopulation
+	println(x)
+end
 
+global feasibleEntities = filter(x -> isFeasible(x), finalPopulation)
+global bestFitness = maximum(map(x -> GAFitness(x), feasibleEntities))
+global bestEntities = Set(filter(x -> GAFitness(x) ≈ bestFitness, feasibleEntities))
+
+println("Best entities:")
 for x::Entity in bestEntities
 	println(x)
 end
