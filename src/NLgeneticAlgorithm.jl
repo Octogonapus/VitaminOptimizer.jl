@@ -153,10 +153,23 @@ function GAMutate(entity::Entity, mutationProb::Float64)::Entity
 		if (rand() <= mutationProb) rand(limb.minLinks[1].dhParam.r:limb.maxLinks[1].dhParam.r)/1000 else entity.link1Length end,
 		if (rand() <= mutationProb) rand(limb.minLinks[2].dhParam.r:limb.maxLinks[2].dhParam.r)/1000 else entity.link2Length end,
 		if (rand() <= mutationProb) rand(limb.minLinks[3].dhParam.r:limb.maxLinks[3].dhParam.r)/1000 else entity.link3Length end,
-		if (rand() <= mutationProb) rand(gearRatios) else entity.gearRatio1 end,
-		if (rand() <= mutationProb) rand(gearRatios) else entity.gearRatio2 end,
-		if (rand() <= mutationProb) rand(gearRatios) else entity.gearRatio3 end
+		if (rand() <= mutationProb) randomGearRatio() else entity.gearRatio1 end,
+		if (rand() <= mutationProb) randomGearRatio() else entity.gearRatio2 end,
+		if (rand() <= mutationProb) randomGearRatio() else entity.gearRatio3 end
 	)
+end
+
+"""
+Generates a random gear ratio with a 50% chance to gear down and a 50% chance
+to gear up. Simply generating a random number in the allowed range of ratios
+would produce too many ratios greater than 1.
+"""
+function randomGearRatio()
+	if rand() > 0.5
+		return rand() * limb.maxGearRatio
+	else
+		return rand() * (1/limb.maxGearRatio)
+	end
 end
 
 function GAShouldStop(population::Vector{Entity}, generationNumber::Int64)::Bool
