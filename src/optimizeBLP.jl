@@ -85,6 +85,8 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, fi
 	@slotFunc(Fml, 14, limbSlotLnLink23)
 	@slotFunc(Fml, 15, massTimesLink1)
 	@slotFunc(Fml, 16, massTimesLink2)
+    @slotFunc(Fml, 17, closeTorque2)
+	@slotFunc(Fml, 17, closeTorque3)
 
 	@constraint(model, sum(slot1) == 1)
 	@constraint(model, sum(slot2) == 1)
@@ -124,6 +126,9 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, fi
 	# Equation 7
 	@expression(model, ω3Required, log(limb.tipVelocity) - limbSlotLnLink3())
 	@constraint(model, eq8, motorSlotLnω(3) .>= ω3Required)
+
+	@constraint(model, motorSlotτ(2) .>= closeTorque2())
+	@constraint(model, motorSlotτ(3) .>= closeTorque3())
 
 	objectiveFunction = sum(i -> motorSlotPrice(i), 1:length(slots))
 	@objective(model, Min, objectiveFunction)
@@ -236,23 +241,40 @@ Optimal motors:
 """
 function loadAndOptimzeAtParetoFrontier!(model::Model, constraintsFile::String,
 	limbName::String, motorOptionsFile::String, resultsFile::String)
-	limb, motors, gearRatios = loadProblem(constraintsFile, limbName, motorOptionsFile, 1000.0)
+	limb, motors, gearRatios = loadProblem(
+		constraintsFile,
+		limbName,
+		motorOptionsFile,
+		1000.0)
 
 	println("Optimizing initial model.")
-	model, objectiveFunction, solution, featureMatrix =
-		buildAndOptimizeModel!(model, limb, motors, gearRatios, resultsFile)
+	model, objectiveFunction, solution, featureMatrix = buildAndOptimizeModel!(
+		model,
+		limb,
+		motors,
+		gearRatios,
+		resultsFile)
 
 	println("Optimizing at Pareto frontier.")
-	solution = optimizeAtParetoFrontier(model, objectiveFunction, featureMatrix, motors, resultsFile)
+	solution = optimizeAtParetoFrontier(
+		model,
+		objectiveFunction,
+		featureMatrix,
+		motors,
+		resultsFile)
 
 	return solution
 end
 
-solution = loadAndOptimzeAtParetoFrontier!(
-    #makeGLPKModel(),
-    makeGurobiModel(1),
-    "res/constraints2.json",
-    "HephaestusArmLimbOne",
-    "res/motorOptions.json",
-    "optimizationTestResults_blp_loadAndOptimzeAtParetoFrontier.txt"
-)
+limb, motors, gearRatios = loadProblem(
+	"res/constraints2.json",
+	"HephaestusArmLimbOne",
+	"res/motorOptions.json",
+	1000.0)
+
+model, objectiveFunction, solution, featureMatrix = buildAndOptimizeModel!(
+	makeGurobiModel(1),
+	limb,
+	motors,
+	gearRatios,
+	"optimizationTestResults_blp_loadAndOptimzeAtParetoFrontier.txt")

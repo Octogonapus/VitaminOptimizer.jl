@@ -225,14 +225,6 @@ function makeNLForceConstaint(entity::Entity)::Float64
 		 0 (-entity.link3Length * sin(α + β) - entity.link2Length * cos(α)) (-entity.link3Length * sin(α + β))]
 	jointTorques = transpose(J) * [0, 0, limb.tipForceClosePos]
 
-	# println(limb.tipForce)
-	# println(entity.link1Length)
-	# println(entity.link2Length)
-	# println(entity.link3Length)
-	# println(α)
-	# println(β)
-	# println(jointTorques)
-
 	return (jointTorques[2] - motors[entity.motor2Index].τStall / entity.gearRatio2) +
 	       (jointTorques[3] - motors[entity.motor3Index].τStall / entity.gearRatio3)
 end
