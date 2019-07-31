@@ -3,7 +3,7 @@ include("parseMotorOptions.jl")
 include("problemUtil.jl")
 
 import LinearAlgebra
-using Plots, Statistics, Distributed
+using Plots, Statistics, Distributions
 
 const gravity = 9.80665
 
@@ -166,9 +166,9 @@ would produce too many ratios greater than 1.
 """
 function randomGearRatio()
 	if rand() > 0.5
-		return rand() * limb.maxGearRatio
+		return rand(Uniform(1, limb.maxGearRatio))
 	else
-		return rand() * (1/limb.maxGearRatio)
+		return rand(Uniform(1/limb.maxGearRatio, 1))
 	end
 end
 
