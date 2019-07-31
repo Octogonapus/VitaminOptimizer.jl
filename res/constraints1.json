@@ -5,7 +5,8 @@
  "closePosX":100.0,
  "closePosZ":50.0,
  "maximumPrice":120.0,
- "gearRatio":2.3333,
+ "maxGearRatio":7.0,
+ "gearRatioStep":1.0,
  "HephaestusArmLimbOne": {
    "min": {
     "basePan": {

@@ -35,6 +35,8 @@ struct Limb
     tipForceClosePos::Float64 # Units N
     targetX::Float64 # Units m
     targetZ::Float64 # Units m
+    maxGearRatio::Float64
+    gearRatioStep::Float64
 end
 
 function parseConstraints!(fileName::String, limbNames::Array{String, 1}, linearConversion::Float64)::Array{Limb, 1}
@@ -62,7 +64,9 @@ function parseLimb(json::Dict{String, Any}, limbName::String, linearConversion::
         tipForce,
         tipForceClosePos,
         json["closePosX"]/linearConversion,
-        json["closePosZ"]/linearConversion
+        json["closePosZ"]/linearConversion,
+        json["maxGearRatio"],
+        json["gearRatioStep"]
     )
 end
 

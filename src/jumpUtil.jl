@@ -1,4 +1,3 @@
-
 """	failedToOptimize(model)
 
 Check if the `model` failed to optimize.
