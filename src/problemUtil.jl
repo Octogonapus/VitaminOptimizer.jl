@@ -9,7 +9,7 @@ function loadProblem(constraintsFile::String, limbName::String, motorOptionsFile
 	motors = parseMotorOptions!(motorOptionsFile)
 
 	# TODO: Put available gear ratios in the constraints file
-	ratios = collect(range(1, step=2, length=10))
+	ratios = collect(range(1, stop=7, step=1))
 	gearRatios = Set(hcat(ratios, 1 ./ ratios))
 
 	return (limb, motors, gearRatios)
