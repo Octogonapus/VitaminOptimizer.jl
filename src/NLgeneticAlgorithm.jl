@@ -246,7 +246,7 @@ function isFeasible(entity::Entity)
 	return maximum(constraintValues) <= 0
 end
 
-const global maxNumGenerations = 150000
+const global maxNumGenerations = 100_000
 
 global (finalPopulation, avgFitness) = geneticAlgorithm(
 	map(x -> makeRandomEntity(), 1:100),
