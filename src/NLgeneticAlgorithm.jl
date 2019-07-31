@@ -238,9 +238,9 @@ function isFeasible(entity::Entity)
 	return maximum(constraintValues) <= 0
 end
 
-const global maxNumGenerations = 100_000
+const global maxNumGenerations = 10_000
 
-global (finalPopulation, avgFitness) = geneticAlgorithm(
+global (finalPopulation, avgFitness), totalTime, bytes, gcTime, memAllocs = @timed geneticAlgorithm(
 	map(x -> makeRandomEntity(), 1:100),
 	makeConstraints(),
 	0.05,
@@ -263,6 +263,8 @@ if !isempty(feasibleEntities)
 		println(x)
 	end
 end
+
+println("Time: ", totalTime)
 
 avgFitnessPerGen = plot(1:(maxNumGenerations+1), avgFitness, title="Average Fitness per Generation",
 	label=["Average Fitness"], xlabel="Generation Number")
