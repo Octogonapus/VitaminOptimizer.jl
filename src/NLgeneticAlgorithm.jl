@@ -293,7 +293,7 @@ function runN(numRuns::Int64)
 
 	runs = []
 	Threads.@threads for i = 1:numRuns
-		push!(runs, runOnce(limb, motors))
+		push!(runs, @time runOnce(limb, motors))
 	end
 
 	fitness = map(x -> x[1], runs)
@@ -306,4 +306,4 @@ function runN(numRuns::Int64)
 	end
 end
 
-runN(10)
+runN(20)
