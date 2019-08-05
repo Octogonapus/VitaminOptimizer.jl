@@ -171,7 +171,7 @@ function randomGearRatio(entity::Entity)::Float64
 end
 
 function GAShouldStop(population::Vector{Entity}, generationNumber::Int64)::Bool
-	return generationNumber > 100_000
+	return generationNumber > 200_000
 end
 
 """
@@ -179,9 +179,7 @@ Each of these constraints is of the form g(x) <= 0.
 """
 function makeConstraints()
 	gravity::Float64 = 9.80665
-	return [entity::Entity -> (entity.limb.tipForce * (entity.link1Length + entity.link2Length + entity.link3Length) +
-				gravity * (entity.motors[entity.motor2Index].mass * entity.link1Length +
-				entity.motors[entity.motor3Index].mass * (entity.link1Length + entity.link2Length))) -
+	return [entity::Entity -> (entity.limb.tipForce * (entity.link1Length + entity.link2Length + entity.link3Length)) -
 				entity.motors[entity.motor1Index].τStall / entity.gearRatio1,
 
 		entity::Entity -> (entity.limb.tipForce * (entity.link2Length + entity.link3Length) +
