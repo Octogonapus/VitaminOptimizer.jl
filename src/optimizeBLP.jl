@@ -10,8 +10,6 @@ include("jumpUtil.jl")
 include("paretoUtil.jl")
 include("gurobiModel.jl")
 
-const gravity = 9.80665
-
 """
 	findOptimalChoices(featureMatrix, motors)
 
@@ -62,6 +60,7 @@ function buildAndOptimizeModel!(model::Model, limb::Limb, motors, gearRatios, fi
 	numFmCols = length(motors) * length(gearRatios)
 	linkRangeLength = 10
 	numFlCols = linkRangeLength^length(limb.maxLinks)
+	gravity = 9.80665
 
 	@variable(model, slot1[1:numFmCols * numFlCols], Bin)
 	@variable(model, slot2[1:numFmCols * numFlCols], Bin)
@@ -258,15 +257,27 @@ function loadAndOptimzeAtParetoFrontier!(model::Model, constraintsFile::String,
 	return solution
 end
 
-limb, motors, gearRatios = loadProblem(
-	"res/constraints2.json",
-	"HephaestusArmLimbOne",
-	"res/motorOptions.json",
-	1000.0)
+function timedOptimize(motorOptionsFile::String)
+	println("Motor options: ", motorOptionsFile)
 
-model, objectiveFunction, solution, featureMatrix = buildAndOptimizeModel!(
-	makeGurobiModel(1),
-	limb,
-	motors,
-	gearRatios,
-	"optimizationTestResults_blp_loadAndOptimzeAtParetoFrontier.txt")
+	limb, motors, gearRatios = loadProblem(
+		"res/constraints2.json",
+		"HephaestusArmLimbOne",
+		motorOptionsFile,
+		1000.0)
+
+	model, objectiveFunction, solution, featureMatrix = @time buildAndOptimizeModel!(
+		makeGurobiModel(1),
+		limb,
+		motors,
+		gearRatios,
+		"optimizationTestResults_blp_loadAndOptimzeAtParetoFrontier.txt")
+end
+
+for it=["res/random_motor_options_10.json",
+		"res/random_motor_options_50.json",
+		"res/random_motor_options_100.json",
+		"res/random_motor_options_500.json",
+		"res/random_motor_options_1000.json"]
+	timedOptimize(it)
+end
