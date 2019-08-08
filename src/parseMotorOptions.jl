@@ -1,12 +1,6 @@
 import JSON
 
-struct Motor
-    name::String
-    τStall::Float64 # Units Nm
-    ωFree::Float64  # Units rad/s
-    price::Float64  # Units usd
-    mass::Float64   # Units kg
-end
+include("motor.jl")
 
 function parseMotorOptions!(fileName::String)::Array{Motor, 1}
     return parseMotorOptions(JSON.parsefile(fileName))
