@@ -284,11 +284,11 @@ function runOnce(limb::Limb, motors::Array{Motor, 1})
 	return bestFitness, bestEntities
 end
 
-function runN(numRuns::Int64)
-	global (limb, motors, gearRatios) = loadProblem(
+function runN(numRuns::Int64, motorOptions::String)
+	limb, motors, gearRatios = loadProblem(
 		"res/constraints2.json",
 		"HephaestusArmLimbOne",
-		"res/motorOptions.json",
+		motorOptions,
 		1.0)
 
 	runs = []
@@ -306,4 +306,10 @@ function runN(numRuns::Int64)
 	end
 end
 
-runN(20)
+for it=["res/random_motor_options_10.json",
+		"res/random_motor_options_50.json",
+		"res/random_motor_options_100.json",
+		"res/random_motor_options_500.json",
+		"res/random_motor_options_1000.json"]
+	runN(20, it)
+end
