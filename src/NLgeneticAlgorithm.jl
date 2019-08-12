@@ -3,7 +3,7 @@ include("parseMotorOptions.jl")
 include("problemUtil.jl")
 
 import LinearAlgebra
-using Plots, Statistics, Distributions
+using Plots, Statistics, Distributions, Distributed
 
 struct Entity
 	motor1Index::Int64
@@ -171,7 +171,7 @@ function randomGearRatio(entity::Entity)::Float64
 end
 
 function GAShouldStop(population::Vector{Entity}, generationNumber::Int64)::Bool
-	return generationNumber > 200_000
+	return generationNumber > 500_000
 end
 
 """
@@ -293,8 +293,7 @@ function runN(numRuns::Int64, motorOptions::String)
 
 	println("Running " * motorOptions)
 	runs = []
-	#Threads.@threads
-	for i = 1:numRuns
+	Threads.@threads for i = 1:numRuns
 		push!(runs, @time runOnce(limb, motors))
 	end
 
@@ -308,7 +307,7 @@ function runN(numRuns::Int64, motorOptions::String)
 	end
 end
 
-for it=["res/random_motor_options_10.json",
+Threads.@threads for it=["res/random_motor_options_10.json",
 		"res/random_motor_options_50.json",
 		"res/random_motor_options_100.json",
 		"res/random_motor_options_500.json",
