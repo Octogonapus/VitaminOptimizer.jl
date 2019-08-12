@@ -118,9 +118,9 @@ function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
 		population = vcat(elites, crossed, mutated)
 		generationNumber += 1
 
-		if generationNumber % 1000 == 0
-			println("Generation ", generationNumber)
-		end
+		# if generationNumber % 1000 == 0
+		# 	println("Generation ", generationNumber)
+		# end
 	end
 
 	return population, avgFitness
@@ -291,15 +291,17 @@ function runN(numRuns::Int64, motorOptions::String)
 		motorOptions,
 		1.0)
 
+	println("Running " * motorOptions)
 	runs = []
-	Threads.@threads for i = 1:numRuns
+	#Threads.@threads
+	for i = 1:numRuns
 		push!(runs, @time runOnce(limb, motors))
 	end
 
 	fitness = map(x -> x[1], runs)
-	bestFitnessPerOpt = plot(1:numRuns, fitness, title="Best Fitness per Optimization",
+	bestFitnessPerOpt = plot(1:numRuns, fitness, title="Best Fitness per Optimization " * motorOptions,
 		label=["Best Fitness"], xlabel="Optimization Number")
-	savefig(bestFitnessPerOpt, "best_fitness_per_optimization.png")
+	savefig(bestFitnessPerOpt, "best_fitness_per_optimization_" * SubString(motorOptions, 5) * ".png")
 
 	for x = runs
 		println(x[2])
