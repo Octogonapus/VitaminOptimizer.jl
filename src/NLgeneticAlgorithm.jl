@@ -171,7 +171,7 @@ function randomGearRatio(entity::Entity)::Float64
 end
 
 function GAShouldStop(population::Vector{Entity}, generationNumber::Int64)::Bool
-	return generationNumber > 500_000
+	return generationNumber > 1_000_000
 end
 
 """
@@ -293,7 +293,7 @@ function runN(numRuns::Int64, motorOptions::String)
 
 	println("Running " * motorOptions)
 	runs = []
-	Threads.@threads for i = 1:numRuns
+	for i = 1:numRuns
 		push!(runs, @time runOnce(limb, motors))
 	end
 
@@ -307,10 +307,10 @@ function runN(numRuns::Int64, motorOptions::String)
 	end
 end
 
-Threads.@threads for it=["res/random_motor_options_10.json",
+for it=["res/random_motor_options_10.json",
 		"res/random_motor_options_50.json",
 		"res/random_motor_options_100.json",
 		"res/random_motor_options_500.json",
 		"res/random_motor_options_1000.json"]
-	runN(20, it)
+	runN(1, it)
 end
