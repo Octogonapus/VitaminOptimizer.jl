@@ -171,7 +171,7 @@ function randomGearRatio(entity::Entity)::Float64
 end
 
 function GAShouldStop(population::Vector{Entity}, generationNumber::Int64)::Bool
-	return generationNumber > 1_000_000
+	return generationNumber > 100_000
 end
 
 """
