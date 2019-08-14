@@ -44,10 +44,11 @@ Required functions:
 	- GAFitness(entity)
 	- GACrossover(entity1, entity2)
 	- GAMutate(entity, mutationProb)
-	- GAShouldStop(population, generationNumber)
+	- GAShouldStop(population, generationNumber, maxNumGenerations)
 """
 function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
-	mutationProb::Float64, eliteRatio::Float64, crossRatio::Float64)
+	mutationProb::Float64, eliteRatio::Float64, crossRatio::Float64,
+	maxNumGenerations::Int64)
 	popNum::Int64 = length(initialPopulation)
 	nElite::Int64 = round(popNum * eliteRatio)
 	nCross::Int64 = round(popNum * crossRatio)
@@ -61,7 +62,7 @@ function geneticAlgorithm(initialPopulation::Vector{Entity}, constraints,
 	avgFitness::Array{Float64, 1} = []
 
 	generationNumber = 0
-	while !GAShouldStop(population, generationNumber)
+	while !GAShouldStop(population, generationNumber, maxNumGenerations)
 		# Step 2
 		fitness = map(GAFitness, population)
 		push!(avgFitness, mean(fitness))
@@ -170,8 +171,9 @@ function randomGearRatio(entity::Entity)::Float64
 	end
 end
 
-function GAShouldStop(population::Vector{Entity}, generationNumber::Int64)::Bool
-	return generationNumber > 100_000
+function GAShouldStop(population::Vector{Entity}, generationNumber::Int64,
+	maxNumGenerations::Int64)::Bool
+	return generationNumber > maxNumGenerations
 end
 
 """
@@ -248,18 +250,14 @@ function isFeasible(entity::Entity)::Bool
 	return maximum(constraintValues) <= 0
 end
 
-function runOnce(limb::Limb, motors::Array{Motor, 1})
+function runOnce(limb::Limb, motors::Array{Motor, 1}, maxNumGenerations::Int64)
 	(finalPopulation, avgFitness), totalTime, bytes, gcTime, memAllocs = @timed geneticAlgorithm(
 		map(x -> makeRandomEntity(limb, motors), 1:100),
 		makeConstraints(),
 		0.05,
 		0.25,
-		1 - 0.25 - 0.05)
-
-	# println("Final population:")
-	# for x::Entity in finalPopulation
-	# 	println(x)
-	# end
+		1 - 0.25 - 0.05,
+		maxNumGenerations)
 
 	feasibleEntities = filter(x -> isFeasible(x), finalPopulation)
 
@@ -268,49 +266,50 @@ function runOnce(limb::Limb, motors::Array{Motor, 1})
 	if !isempty(feasibleEntities)
 		bestFitness = maximum(map(x -> GAFitness(x), feasibleEntities))
 		bestEntities = Set(filter(x -> GAFitness(x) ≈ bestFitness, feasibleEntities))
-
-		# println("Best entities:")
-		# for x::Entity in bestEntities
-		# 	println(x)
-		# end
 	end
 
 	println("Time: ", totalTime)
 
-	# avgFitnessPerGen = plot(avgFitness, title="Average Fitness per Generation",
-	# 	label=["Average Fitness"], xlabel="Generation Number")
-	# savefig(avgFitnessPerGen, "average_fitness_per_generation.png")
-
-	return bestFitness, bestEntities
+	return bestFitness, bestEntities, totalTime
 end
 
-function runN(numRuns::Int64, motorOptions::String)
+function runN(numRuns::Int64, motorOptions::String, maxNumGenerations::Int64)
 	limb, motors, gearRatios = loadProblem(
 		"res/constraints2.json",
 		"HephaestusArmLimbOne",
 		motorOptions,
 		1.0)
 
-	println("Running " * motorOptions)
+	println("Running " * motorOptions * " with " * string(maxNumGenerations) * " generations")
 	runs = []
 	for i = 1:numRuns
-		push!(runs, @time runOnce(limb, motors))
+		push!(runs, runOnce(limb, motors, maxNumGenerations))
 	end
 
+	motorOptionsName = motorOptions[findlast('/', motorOptions)+1:findlast('.', motorOptions)-1]
+	generationsName = string(maxNumGenerations) * "_generations"
+	folderPath = motorOptionsName * "/" * generationsName
+	mkpath(folderPath)
+
 	fitness = map(x -> x[1], runs)
-	bestFitnessPerOpt = plot(1:numRuns, fitness, title="Best Fitness per Optimization " * motorOptions,
+	bestFitnessPerOpt = plot(1:numRuns, fitness,
+		title="Best Fitness per Optimization\n" * string(length(motors)) *
+			" motors, " * string(maxNumGenerations) * " generations",
 		label=["Best Fitness"], xlabel="Optimization Number")
-	savefig(bestFitnessPerOpt, "best_fitness_per_optimization_" * SubString(motorOptions, 5) * ".png")
+
+	savefig(bestFitnessPerOpt, folderPath * "/best_fitness_per_optimization.png")
 
 	for x = runs
 		println(x[2])
 	end
 end
 
-for it=["res/random_motor_options_10.json",
+for maxNumGenerations=[100_000, 200_000, 300_000, 500_000, 750_000, 1_000_000, 2_000_000]
+	for motorOptions=["res/random_motor_options_10.json",
 		"res/random_motor_options_50.json",
 		"res/random_motor_options_100.json",
 		"res/random_motor_options_500.json",
 		"res/random_motor_options_1000.json"]
-	runN(1, it)
+		runN(10, motorOptions, maxNumGenerations)
+	end
 end
