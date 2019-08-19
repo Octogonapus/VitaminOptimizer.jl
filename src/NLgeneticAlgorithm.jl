@@ -303,8 +303,8 @@ function runN(numRuns::Int64, motorOptions::String, maxNumGenerations::Int64)
 		println(x[2])
 	end
 end
-
-for maxNumGenerations=[100_000, 200_000, 300_000, 500_000, 750_000, 1_000_000, 2_000_000]
+#100_000, 200_000, 300_000, 500_000, 750_000,
+for maxNumGenerations=[1_000_000, 2_000_000]
 	for motorOptions=["res/random_motor_options_10.json",
 		"res/random_motor_options_50.json",
 		"res/random_motor_options_100.json",
