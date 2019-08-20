@@ -304,7 +304,7 @@ function runN(numRuns::Int64, motorOptions::String, maxNumGenerations::Int64)
 	end
 end
 #100_000, 200_000, 300_000, 500_000, 750_000,
-for maxNumGenerations=[1_000_000, 2_000_000]
+for maxNumGenerations=[10_000, 25_000, 50_000, 75_000]
 	for motorOptions=["res/random_motor_options_10.json",
 		"res/random_motor_options_50.json",
 		"res/random_motor_options_100.json",
